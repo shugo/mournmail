@@ -32,17 +32,26 @@ define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
   m.body = body
   m.delivery_method(CONFIG[:mournmail_delivery_method],
                     CONFIG[:mournmail_delivery_options])
-  kill_buffer(Buffer.current, force: true)
+  buffer = Buffer.current
+  bury_buffer(buffer)
   Thread.start do
     begin
       m.deliver!
       next_tick do
+        kill_buffer(buffer, force: true)
         message("Mail sent.")
       end
     rescue Exception => e
       next_tick do
+        switch_to_buffer(buffer)
         raise e
       end
     end
+  end
+end
+
+define_command(:mail_kill, doc: "Kill mail buffer.") do
+  if yes_or_no?("Kill current mail?")
+    kill_buffer(Buffer.current, force: true)
   end
 end
