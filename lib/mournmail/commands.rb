@@ -1,4 +1,5 @@
 require "mail"
+require "mail-iso-2022-jp"
 
 define_command(:mail, doc: "Write a new mail.") do
   buffer = Buffer.new_buffer("*mail*")
@@ -16,11 +17,22 @@ define_command(:mail, doc: "Write a new mail.") do
 end
 
 define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
-  s = Buffer.current.to_s.sub(/^--text follows this line--$/, "")
-  m = Mail.new(s)
-  m.delivery_method(:smtp, CONFIG[:mournmail_smtp_options])
-  Buffer.current.modified = false
-  kill_buffer(Buffer.current)
+  s = Buffer.current.to_s
+  charset = CONFIG[:mournmail_charset]
+  begin
+    s.encode(charset)
+  rescue Encoding::UndefinedConversionError
+    charset = "utf-8"
+  end
+  header, body = s.split(/^--text follows this line--\n/)
+  m = Mail.new(charset: charset)
+  header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
+    m[name] = val
+  end
+  m.body = body
+  m.delivery_method(CONFIG[:mournmail_delivery_method],
+                    CONFIG[:mournmail_delivery_options])
+  kill_buffer(Buffer.current, force: true)
   Thread.start do
     begin
       m.deliver!
