@@ -1,28 +1,15 @@
 # Mournmail
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/mournmail`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Mournmail is a message user agent for
+[Textbringer](https://github.com/shugo/textbringer).
 
 ## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'mournmail'
-```
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
 
     $ gem install mournmail
 
 ## Usage
 
-TODO: Write usage instructions here
+Type `M-x mail` to send a mail.
 
 ## Development
 
@@ -32,7 +19,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/Shugo Maeda/mournmail.
+Bug reports and pull requests are welcome on GitHub at https://github.com/shugo/mournmail.
 
 
 ## License
