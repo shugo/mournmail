@@ -24,8 +24,8 @@ class SummaryItem
   def to_s(limit = 78, from_limit = 16, level = 0)
     space = "  " * (level < 8 ? level : 8)
     s = String.new
-    s << format("%s  %s%s [ %s ] ",
-                @uid, space, format_date(@date),
+    s << format("%s  %s %s[ %s ] ",
+                @uid, format_date(@date), space,
                 ljust(format_from(@from), from_limit))
     s << ljust(decode_eword(@subject.to_s), limit - Buffer.display_width(s))
     s << "\n"
@@ -137,14 +137,16 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   mournmail_background do
     # TODO: Cache items.
     summary_items = mournmail_fetch_summary(mailbox)
+    summary_text = String.new
+    summary_items.each do |item|
+      summary_text << item.to_s
+    end
     next_tick do
       buffer = Buffer.find_or_new("*summary*", undo_limit: 0,
                                   read_only: true)
       buffer.read_only_edit do
         buffer.clear
-        summary_items.each do |item|
-          buffer.insert(item.to_s)
-        end
+        buffer.insert(summary_text)
       end
       switch_to_buffer(buffer)
       message("Visited #{mailbox}")
