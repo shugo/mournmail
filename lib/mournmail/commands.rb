@@ -100,13 +100,21 @@ def mournmail_background
   }
 end
 
-def mournmail_fetch_summary(mailbox)
+def mournmail_imap_connect
   imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
                        CONFIG[:mournmail_imap_options])
   begin
     imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] || "PLAIN",
                       CONFIG[:mournmail_imap_options][:user_name],
                       CONFIG[:mournmail_imap_options][:password])
+    yield(imap)
+  ensure
+    imap.disconnect
+  end
+end
+
+def mournmail_fetch_summary(mailbox)
+  mournmail_imap_connect do |imap|
     imap.select(mailbox)
     data = imap.fetch(1..-1, ["UID", "ENVELOPE"])
     message_id_table = {}
@@ -126,8 +134,6 @@ def mournmail_fetch_summary(mailbox)
       end
     end
     summary_items
-  ensure
-    imap.disconnect
   end
 end
 
@@ -144,12 +150,66 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
     next_tick do
       buffer = Buffer.find_or_new("*summary*", undo_limit: 0,
                                   read_only: true)
+      buffer.apply_mode(Mournmail::SummaryMode)
       buffer.read_only_edit do
         buffer.clear
         buffer.insert(summary_text)
       end
       switch_to_buffer(buffer)
+      buffer[:mourmail_mailbox] = mailbox
       message("Visited #{mailbox}")
+    end
+  end
+end
+
+define_command(:mournmail_summary_read, doc: "Read a mail.") do
+  buffer = Buffer.current
+  buffer.save_excursion do
+    buffer.beginning_of_line
+    return if !buffer.looking_at?(/\d+/)
+    uid = match_string(0).to_i
+    mailbox = buffer[:mourmail_mailbox]
+    mournmail_background do
+      mournmail_imap_connect do |imap|
+        imap.select(mailbox)
+        # TODO: Cache messages.
+        data = imap.uid_fetch(uid, "BODY[]")
+        if data.empty?
+          raise EditorError, "No such mail: #{uid}"
+        end
+        mail = Mail.new(data[0].attr["BODY[]"])
+        part = 
+        if mail.multipart?
+          body = mail.text_part&.decoded
+        else
+          body = mail.body.decoded.encode(Encoding::UTF_8, mail.charset)
+        end
+        message = <<~EOF
+          Subject: #{mail.subject}
+          Date: #{mail.date}
+          From: #{mail.from}
+          To: #{mail.to}
+
+          #{body}
+        EOF
+        next_tick do
+          message_buffer = Buffer.find_or_new("*message*",
+                                              undo_limit: 0, read_only: true)
+          message_buffer.read_only_edit do
+            message_buffer.clear
+            message_buffer.insert(message)
+            message_buffer.beginning_of_buffer
+          end
+          if Window.list.size == 1
+            split_window
+            shrink_window(Window.current.lines - 8)
+          end
+          windows = Window.list
+          i = (windows.index(Window.current) + 1) % windows.size
+          window = windows[i]
+          window.buffer = message_buffer
+        end
+      end
     end
   end
 end
