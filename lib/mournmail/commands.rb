@@ -187,8 +187,8 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
         message = <<~EOF
           Subject: #{mail.subject}
           Date: #{mail.date}
-          From: #{mail.from}
-          To: #{mail.to}
+          From: #{mail["from"]}
+          To: #{mail["to"]}
 
           #{body}
         EOF
