@@ -180,7 +180,6 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
           raise EditorError, "No such mail: #{uid}"
         end
         mail = Mail.new(data[0].attr["BODY[]"])
-        part = 
         if mail.multipart?
           body = mail.text_part&.decoded
         else
