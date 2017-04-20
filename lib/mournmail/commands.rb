@@ -7,6 +7,26 @@ require "time"
 require "fileutils"
 
 module Mournmail
+  def self.define_variable(name, value = nil)
+    instance_variable_set("@" + name.to_s, value)
+    singleton_class.send(:attr_accessor, name)
+  end
+
+  define_variable :background_thread
+
+  def self.background
+    if background_thread
+      raise EditorError, "Background thread already running"
+    end
+    self.background_thread = Utils.background {
+      begin
+        yield
+      ensure
+        self.background_thread = nil
+      end
+    }
+  end
+
   class Summary
     attr_reader :items, :last_uid
 
@@ -145,19 +165,6 @@ define_command(:mournmail, doc: "Start mournmail.") do
   mournmail_visit_mailbox("INBOX")
 end
 
-def mournmail_background
-  if $mournmail_background_thread
-    raise EditorError, "Background thread already running"
-  end
-  $mournmail_background_thread = background {
-    begin
-      yield
-    ensure
-      $mournmail_background_thread = nil
-    end
-  }
-end
-
 def mournmail_imap_connect
   imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
                        CONFIG[:mournmail_imap_options])
@@ -192,7 +199,7 @@ end
 define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   |mailbox = read_from_minibuffer("Visit mailbox: ", default: "INBOX")|
   message("Visiting #{mailbox} in background...")
-  mournmail_background do
+  Mournmail.background do
     summary = mournmail_fetch_summary(mailbox)
     summary_text = String.new
     summary.items.each do |item|
@@ -257,7 +264,7 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
     return if !buffer.looking_at?(/\d+/)
     uid = match_string(0).to_i
     mailbox = buffer[:mourmail_mailbox]
-    mournmail_background do
+    Mournmail.background do
       mail = Mail.new(mournmail_read_mail(mailbox, uid))
       body = if mail.multipart?
         mail.text_part&.decoded
