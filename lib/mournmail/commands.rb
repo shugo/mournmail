@@ -321,6 +321,7 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
     next_tick do
       message_buffer = Buffer.find_or_new("*message*",
                                           undo_limit: 0, read_only: true)
+      message_buffer.apply_mode(Mournmail::MessageMode)
       message_buffer.read_only_edit do
         message_buffer.clear
         message_buffer.insert(message)
