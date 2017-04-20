@@ -211,6 +211,16 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   end
 end
 
+define_command(:mournmail_quit, doc: "Quit mournmail.") do
+  delete_other_windows
+  if buffer = Buffer["*summary*"]
+    kill_buffer(buffer)
+  end
+  if buffer = Buffer["*message*"]
+    kill_buffer(buffer)
+  end
+end
+
 define_command(:mournmail_summary_read, doc: "Read a mail.") do
   buffer = Buffer.current
   buffer.save_excursion do
