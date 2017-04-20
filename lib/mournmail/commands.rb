@@ -191,7 +191,7 @@ end
 
 define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   |mailbox = read_from_minibuffer("Visit mailbox: ", default: "INBOX")|
-  message("Visit #{mailbox} in background...")
+  message("Visiting #{mailbox} in background...")
   mournmail_background do
     summary = mournmail_fetch_summary(mailbox)
     summary_text = String.new
