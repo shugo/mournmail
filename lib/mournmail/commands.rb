@@ -12,6 +12,9 @@ module Mournmail
     singleton_class.send(:attr_accessor, name)
   end
 
+  define_variable :current_mailbox
+  define_variable :current_mail_uid
+  define_variable :current_mail
   define_variable :background_thread
 
   def self.background
@@ -25,6 +28,16 @@ module Mournmail
         self.background_thread = nil
       end
     }
+  end
+
+  def self.message_window
+    if Window.list.size == 1
+      split_window
+      shrink_window(Window.current.lines - 8)
+    end
+    windows = Window.list
+    i = (windows.index(Window.current) + 1) % windows.size
+    windows[i]
   end
 
   class Summary
@@ -215,7 +228,9 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
         buffer.insert(summary_text)
       end
       switch_to_buffer(buffer)
-      buffer[:mourmail_mailbox] = mailbox
+      Mournmail.current_mailbox = mailbox
+      Mournmail.current_mail = nil
+      Mournmail.current_mail_uid = nil
       message("Visited #{mailbox}")
     end
   end
@@ -259,20 +274,43 @@ end
 
 define_command(:mournmail_summary_read, doc: "Read a mail.") do
   buffer = Buffer.current
-  buffer.save_excursion do
-    buffer.beginning_of_line
-    return if !buffer.looking_at?(/\d+/)
-    uid = match_string(0).to_i
-    mailbox = buffer[:mourmail_mailbox]
-    Mournmail.background do
-      mail = Mail.new(mournmail_read_mail(mailbox, uid))
-      body = if mail.multipart?
-        mail.text_part&.decoded
-      else
-        mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
-                                 replace: "?")
-      end.gsub(/\r\n/, "\n")
-      message = <<~EOF
+  begin
+    uid = buffer.save_excursion {
+      buffer.beginning_of_line
+      return if !buffer.looking_at?(/\d+/)
+      match_string(0).to_i
+    }
+    mailbox = Mournmail.current_mailbox
+    if uid == Mournmail.current_mail_uid
+      window = Mournmail.message_window
+      if window.buffer.name == "*message*"
+        old_window = Window.current
+        begin
+          Window.current = window
+          scroll_up
+          return
+        ensure
+          Window.current = old_window
+        end
+      end
+    end
+  rescue RangeError # may be raised by scroll_up
+    buffer.end_of_line
+    if buffer.end_of_buffer?
+      raise EditorError, "No more mail"
+    end
+    buffer.forward_line
+    retry
+  end
+  Mournmail.background do
+    mail = Mail.new(mournmail_read_mail(mailbox, uid))
+    body = if mail.multipart?
+      mail.text_part&.decoded
+    else
+      mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
+                               replace: "?")
+    end.gsub(/\r\n/, "\n")
+    message = <<~EOF
         Subject: #{mail.subject}
         Date: #{mail.date}
         From: #{mail["from"]}
@@ -280,23 +318,18 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
 
         #{body}
       EOF
-      next_tick do
-        message_buffer = Buffer.find_or_new("*message*",
-                                            undo_limit: 0, read_only: true)
-        message_buffer.read_only_edit do
-          message_buffer.clear
-          message_buffer.insert(message)
-          message_buffer.beginning_of_buffer
-        end
-        if Window.list.size == 1
-          split_window
-          shrink_window(Window.current.lines - 8)
-        end
-        windows = Window.list
-        i = (windows.index(Window.current) + 1) % windows.size
-        window = windows[i]
-        window.buffer = message_buffer
+    next_tick do
+      message_buffer = Buffer.find_or_new("*message*",
+                                          undo_limit: 0, read_only: true)
+      message_buffer.read_only_edit do
+        message_buffer.clear
+        message_buffer.insert(message)
+        message_buffer.beginning_of_buffer
       end
+      window = Mournmail.message_window
+      window.buffer = message_buffer
+      Mournmail.current_mail_uid = uid
+      Mournmail.current_mail = mail
     end
   end
 end
