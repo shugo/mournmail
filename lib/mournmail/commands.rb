@@ -337,7 +337,11 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
     if summary_buffer.end_of_buffer?
       raise EditorError, "No more mail"
     end
-    summary_buffer.forward_line
+    begin
+      summary_buffer.re_search_forward(/^\d+ u/)
+    rescue SearchError
+      summary_buffer.forward_line
+    end
     retry
   end
   Mournmail.background do
