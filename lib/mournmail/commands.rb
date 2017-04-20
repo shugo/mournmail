@@ -4,8 +4,59 @@ require "mail"
 require "mail-iso-2022-jp"
 require "net/imap"
 require "time"
+require "fileutils"
 
 module Mournmail
+  class Summary
+    attr_reader :items, :last_uid
+
+    def self.cache_path(mailbox)
+      File.expand_path("~/.mournmail/cache/#{mailbox}/.summary")
+    end
+
+    def self.load(mailbox)
+      File.open(cache_path(mailbox)) { |f|
+        f.flock(File::LOCK_SH)
+        Marshal.load(f)
+      }
+    end
+
+    def self.load_or_new(mailbox)
+      load(mailbox)
+    rescue Errno::ENOENT
+      new(mailbox)
+    end
+
+    def initialize(mailbox)
+      @mailbox = mailbox
+      @items = []
+      @message_id_table = {}
+      @last_uid = nil
+    end
+
+    def add_item(item, message_id, in_reply_to)
+      parent = @message_id_table[in_reply_to]
+      if parent
+        parent.add_reply(item)
+      else
+        @items.push(item)
+      end
+      if message_id
+        @message_id_table[message_id] = item
+      end
+      @last_uid = item.uid
+    end
+
+    def save
+      path = Summary.cache_path(@mailbox)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.open(Summary.cache_path(@mailbox), "w") do |f|
+        f.flock(File::LOCK_EX)
+        Marshal.dump(self, f)
+      end
+    end
+  end
+  
   class SummaryItem
     attr_reader :uid, :date, :from, :subject
     attr_reader :replies
@@ -15,6 +66,7 @@ module Mournmail
       @date = date
       @from = from
       @subject = subject
+      @line = nil
       @replies = []
     end
     
@@ -23,6 +75,19 @@ module Mournmail
     end
     
     def to_s(limit = 78, from_limit = 16, level = 0)
+      @line ||= format_line(limit, from_limit, level)
+      return @line if @replies.empty?
+      s = @line.dup
+      child_level = level + 1
+      @replies.each do |reply|
+        s << reply.to_s(limit, from_limit, child_level)
+      end
+      s
+    end
+    
+    private
+
+    def format_line(limit = 78, from_limit = 16, level = 0)
       space = "  " * (level < 8 ? level : 8)
       s = String.new
       s << format("%s  %s %s[ %s ] ",
@@ -30,18 +95,8 @@ module Mournmail
                   ljust(format_from(@from), from_limit))
       s << ljust(decode_eword(@subject.to_s), limit - Buffer.display_width(s))
       s << "\n"
-      child_level = level + 1
-      @replies.each do |reply|
-        begin
-          s << reply.to_s(limit, from_limit, child_level)
-        rescue TypeError
-          raise "s=#{s.inspect}, reply=#{reply.inspect}, limit=#{limit.inspect}"
-        end
-      end
       s
     end
-    
-    private
     
     def ljust(s, n)
       width = 0
@@ -118,24 +173,16 @@ end
 def mournmail_fetch_summary(mailbox)
   mournmail_imap_connect do |imap|
     imap.select(mailbox)
-    data = imap.fetch(1..-1, ["UID", "ENVELOPE"])
-    message_id_table = {}
-    summary_items = []
+    summary = Mournmail::Summary.load_or_new(mailbox)
+    first_uid = (summary.last_uid || 0) + 1
+    data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE"])
     data.each do |i|
       uid = i.attr["UID"]
       env = i.attr["ENVELOPE"]
       item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject)
-      parent = message_id_table[env.in_reply_to]
-      if parent
-        parent.add_reply(item)
-      else
-        summary_items.push(item)
-      end
-      if env.message_id
-        message_id_table[env.message_id] = item
-      end
+      summary.add_item(item, env.message_id, env.in_reply_to)
     end
-    summary_items
+    summary
   end
 end
 
@@ -144,11 +191,12 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   message("Visit #{mailbox} in background...")
   mournmail_background do
     # TODO: Cache items.
-    summary_items = mournmail_fetch_summary(mailbox)
+    summary = mournmail_fetch_summary(mailbox)
     summary_text = String.new
-    summary_items.each do |item|
+    summary.items.each do |item|
       summary_text << item.to_s
     end
+    summary.save
     next_tick do
       buffer = Buffer.find_or_new("*summary*", undo_limit: 0,
                                   read_only: true)
