@@ -5,81 +5,83 @@ require "mail-iso-2022-jp"
 require "net/imap"
 require "time"
 
-class SummaryItem
-  attr_reader :uid, :date, :from, :subject
-  attr_reader :replies
-
-  def initialize(uid, date, from, subject)
-    @uid = uid
-    @date = date
-    @from = from
-    @subject = subject
-    @replies = []
-  end
-
-  def add_reply(reply)
-    @replies << reply
-  end
-
-  def to_s(limit = 78, from_limit = 16, level = 0)
-    space = "  " * (level < 8 ? level : 8)
-    s = String.new
-    s << format("%s  %s %s[ %s ] ",
-                @uid, format_date(@date), space,
-                ljust(format_from(@from), from_limit))
-    s << ljust(decode_eword(@subject.to_s), limit - Buffer.display_width(s))
-    s << "\n"
-    child_level = level + 1
-    @replies.each do |reply|
-      begin
-        s << reply.to_s(limit, from_limit, child_level)
-      rescue TypeError
-        raise "s=#{s.inspect}, reply=#{reply.inspect}, limit=#{limit.inspect}"
+module Mournmail
+  class SummaryItem
+    attr_reader :uid, :date, :from, :subject
+    attr_reader :replies
+    
+    def initialize(uid, date, from, subject)
+      @uid = uid
+      @date = date
+      @from = from
+      @subject = subject
+      @replies = []
+    end
+    
+    def add_reply(reply)
+      @replies << reply
+    end
+    
+    def to_s(limit = 78, from_limit = 16, level = 0)
+      space = "  " * (level < 8 ? level : 8)
+      s = String.new
+      s << format("%s  %s %s[ %s ] ",
+                  @uid, format_date(@date), space,
+                  ljust(format_from(@from), from_limit))
+      s << ljust(decode_eword(@subject.to_s), limit - Buffer.display_width(s))
+      s << "\n"
+      child_level = level + 1
+      @replies.each do |reply|
+        begin
+          s << reply.to_s(limit, from_limit, child_level)
+        rescue TypeError
+          raise "s=#{s.inspect}, reply=#{reply.inspect}, limit=#{limit.inspect}"
+        end
       end
+      s
     end
-    s
-  end
-
-  private
-
-  def ljust(s, n)
-    width = 0
-    str = String.new
-    s.each_char do |c|
-      w = Buffer.display_width(c)
-      width += w
-      if width > n
-        width -= w
-        break
+    
+    private
+    
+    def ljust(s, n)
+      width = 0
+      str = String.new
+      s.each_char do |c|
+        w = Buffer.display_width(c)
+        width += w
+        if width > n
+          width -= w
+          break
+        end
+        str.concat(c)
+        break if width == n
       end
-      str.concat(c)
-      break if width == n
+      str + " " * (n - width)
     end
-    str + " " * (n - width)
-  end
-
-  def format_date(date)
-    (Time.parse(date) rescue Time.at(0)).strftime("%m/%d %H:%M")
-  end
-
-  def format_from(from)
-    addr = from[0]
-    if addr&.name
-      "#{decode_eword(addr.name)} <#{addr.mailbox}@#{addr.host}>"
-    elsif addr&.mailbox
-      "#{addr.mailbox}@#{addr.host}"
-    else
-      "Unknown sender"
+    
+    def format_date(date)
+      (Time.parse(date) rescue Time.at(0)).strftime("%m/%d %H:%M")
     end
-  end 
-
-  def decode_eword(s)
-    Mail::Encodings.decode_encode(s, :decode).
-      encode(Encoding::UTF_8).tr("\t", " ")
-  rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
-    s.b.gsub(/[\x80-\xff]/n) { |c|
-      "<%02X>" % c.ord
-    }
+    
+    def format_from(from)
+      addr = from[0]
+      if addr&.name
+        "#{decode_eword(addr.name)} <#{addr.mailbox}@#{addr.host}>"
+      elsif addr&.mailbox
+        "#{addr.mailbox}@#{addr.host}"
+      else
+        "Unknown sender"
+      end
+    end 
+    
+    def decode_eword(s)
+      Mail::Encodings.decode_encode(s, :decode).
+        encode(Encoding::UTF_8).tr("\t", " ")
+    rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
+      s.b.gsub(/[\x80-\xff]/n) { |c|
+        "<%02X>" % c.ord
+      }
+    end
   end
 end
 
@@ -122,7 +124,7 @@ def mournmail_fetch_summary(mailbox)
     data.each do |i|
       uid = i.attr["UID"]
       env = i.attr["ENVELOPE"]
-      item = SummaryItem.new(uid, env.date, env.from, env.subject)
+      item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject)
       parent = message_id_table[env.in_reply_to]
       if parent
         parent.add_reply(item)
