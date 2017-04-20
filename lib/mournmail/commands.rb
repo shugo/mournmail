@@ -257,11 +257,11 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
     mailbox = buffer[:mourmail_mailbox]
     mournmail_background do
       mail = Mail.new(mournmail_read_mail(mailbox, uid))
-      if mail.multipart?
-        body = mail.text_part&.decoded
+      body = if mail.multipart?
+        mail.text_part&.decoded
       else
-        body = mail.body.decoded.encode(Encoding::UTF_8, mail.charset)
-      end
+        mail.body.decoded.encode(Encoding::UTF_8, mail.charset)
+      end.gsub(/\r\n/, "\n")
       message = <<~EOF
         Subject: #{mail.subject}
         Date: #{mail.date}
