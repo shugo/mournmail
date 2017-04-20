@@ -176,12 +176,14 @@ def mournmail_fetch_summary(mailbox)
     imap.select(mailbox)
     summary = Mournmail::Summary.load_or_new(mailbox)
     first_uid = (summary.last_uid || 0) + 1
-    data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE"])
-    data.each do |i|
-      uid = i.attr["UID"]
-      env = i.attr["ENVELOPE"]
-      item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject)
-      summary.add_item(item, env.message_id, env.in_reply_to)
+    if first_uid != imap.responses["UIDNEXT"]&.last
+      data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE"])
+      data.each do |i|
+        uid = i.attr["UID"]
+        env = i.attr["ENVELOPE"]
+        item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject)
+        summary.add_item(item, env.message_id, env.in_reply_to)
+      end
     end
     summary
   end
