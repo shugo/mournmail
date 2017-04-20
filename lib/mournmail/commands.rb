@@ -262,7 +262,8 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
       body = if mail.multipart?
         mail.text_part&.decoded
       else
-        mail.body.decoded.encode(Encoding::UTF_8, mail.charset)
+        mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
+                                 replace: "?")
       end.gsub(/\r\n/, "\n")
       message = <<~EOF
         Subject: #{mail.subject}
