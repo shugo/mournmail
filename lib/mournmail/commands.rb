@@ -341,8 +341,8 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
                                replace: "?")
     end.gsub(/\r\n/, "\n")
     message = <<~EOF
-        Subject: #{mail.subject}
-        Date: #{mail.date}
+        Subject: #{mail["subject"]}
+        Date: #{mail["date"]}
         From: #{mail["from"]}
         To: #{mail["to"]}
 
