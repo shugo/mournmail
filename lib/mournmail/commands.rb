@@ -195,6 +195,15 @@ module Mournmail
       }
     end
   end
+
+  def self.text_body(mail)
+    body = if mail.multipart?
+      mail.text_part&.decoded
+    else
+      mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
+                               replace: "?")
+    end.gsub(/\r\n/, "\n")
+  end
 end
 
 define_command(:mournmail, doc: "Start mournmail.") do
@@ -334,12 +343,7 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
   Mournmail.background do
     mailbox = Mournmail.current_mailbox
     mail = Mail.new(mournmail_read_mail(mailbox, uid))
-    body = if mail.multipart?
-      mail.text_part&.decoded
-    else
-      mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
-                               replace: "?")
-    end.gsub(/\r\n/, "\n")
+    body = Mournmail.text_body(mail)
     message = <<~EOF
         Subject: #{mail["subject"]}
         Date: #{mail["date"]}
@@ -374,6 +378,43 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
       end
       Mournmail.current_uid = uid
       Mournmail.current_mail = mail
+    end
+  end
+end
+
+define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
+  summary_buffer = Buffer.current
+  uid = summary_buffer.save_excursion {
+    summary_buffer.beginning_of_line
+    return if !summary_buffer.looking_at?(/\d+/)
+    match_string(0).to_i
+  }
+  Mournmail.background do
+    mailbox = Mournmail.current_mailbox
+    mail = Mail.new(mournmail_read_mail(mailbox, uid))
+    body = Mournmail.text_body(mail)
+    next_tick do
+      Window.current = Mournmail.message_window
+      Commands.mail
+      insert(mail["from"])
+      re_search_forward(/^Subject: /)
+      subject = mail["subject"].to_s
+      if /\Are:/i !~ subject
+        insert("Re: ")
+      end
+      insert(subject)
+      if mail['message-id']
+        insert("\nIn-Reply-To: #{mail['message-id']}")
+      end
+      end_of_buffer
+      set_mark_command
+      insert(<<~EOF + body.gsub(/^/, "> "))
+        
+        
+        On #{mail['date']}
+        #{mail['from']} wrote:
+      EOF
+      exchange_point_and_mark
     end
   end
 end

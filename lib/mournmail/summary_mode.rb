@@ -7,6 +7,7 @@ module Mournmail
   class SummaryMode < Textbringer::Mode
     SUMMARY_MODE_MAP = Keymap.new
     SUMMARY_MODE_MAP.define_key(" ", :mournmail_summary_read)
+    SUMMARY_MODE_MAP.define_key("a", :mournmail_summary_reply)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
 
     define_syntax :unseen, /^\d+ u.*/
