@@ -395,6 +395,7 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
 end
 
 define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
+  |reply_all = current_prefix_arg|
   summary_buffer = Buffer.current
   uid = summary_buffer.save_excursion {
     summary_buffer.beginning_of_line
@@ -408,7 +409,15 @@ define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
     next_tick do
       Window.current = Mournmail.message_window
       Commands.mail
-      insert(mail["reply-to"] || mail["from"])
+      if reply_all
+        insert(mail.from&.join(", "))
+        cc_addrs = [mail.reply_to, mail.to, mail.cc].flat_map { |addrs|
+          addrs || []
+        }.uniq
+        insert("\nCc: " + cc_addrs.join(", "))
+      else
+        insert(mail.reply_to&.join(", ") || mail.from&.join(", "))
+      end
       re_search_forward(/^Subject: /)
       subject = mail["subject"].to_s
       if /\Are:/i !~ subject
@@ -419,7 +428,7 @@ define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
         insert("\nIn-Reply-To: #{mail['message-id']}")
       end
       end_of_buffer
-      set_mark_command
+      push_mark
       insert(<<~EOF + body.gsub(/^/, "> "))
         
         
