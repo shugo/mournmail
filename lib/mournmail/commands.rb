@@ -267,6 +267,14 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
       Mournmail.current_mail = nil
       Mournmail.current_uid = nil
       message("Visited #{mailbox}")
+      begin
+        beginning_of_buffer
+        re_search_forward(/^\d+ u/)
+      rescue SearchError
+        end_of_buffer
+        re_search_backward(/^\d+ /)
+      end
+      mournmail_summary_read
     end
   end
 end
