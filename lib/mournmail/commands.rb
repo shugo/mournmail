@@ -408,7 +408,7 @@ define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
     next_tick do
       Window.current = Mournmail.message_window
       Commands.mail
-      insert(mail["from"])
+      insert(mail["reply-to"] || mail["from"])
       re_search_forward(/^Subject: /)
       subject = mail["subject"].to_s
       if /\Are:/i !~ subject
