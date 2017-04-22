@@ -172,7 +172,7 @@ module Mournmail
     end
     
     def format_date(date)
-      (Time.parse(date) rescue Time.at(0)).strftime("%m/%d %H:%M")
+      (Time.parse(date) rescue Time.at(0)).localtime.strftime("%m/%d %H:%M")
     end
     
     def format_from(from)
