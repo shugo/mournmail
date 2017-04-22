@@ -91,7 +91,7 @@ module Mournmail
     def save
       path = Summary.cache_path(@mailbox)
       FileUtils.mkdir_p(File.dirname(path))
-      File.open(Summary.cache_path(@mailbox), "w") do |f|
+      File.open(Summary.cache_path(@mailbox), "w", 0600) do |f|
         f.flock(File::LOCK_EX)
         Marshal.dump(self, f)
       end
@@ -337,7 +337,7 @@ def mournmail_read_mail(mailbox, uid)
       end
       s = data[0].attr["BODY[]"]
       FileUtils.mkdir_p(File.dirname(path))
-      File.open(path, "w") do |f|
+      File.open(path, "w", 0600) do |f|
         f.flock(File::LOCK_EX)
         f.write(s)
       end
