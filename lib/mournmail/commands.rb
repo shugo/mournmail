@@ -394,7 +394,31 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
   end
 end
 
-define_command(:mournmail_summary_reply, doc: "Reply to current message.") do
+define_command(:mournmail_summary_scroll_down,
+               doc: "Scroll down the current message.") do
+  summary_buffer = Buffer.current
+  uid = summary_buffer.save_excursion {
+    summary_buffer.beginning_of_line
+    return if !summary_buffer.looking_at?(/\d+/)
+    match_string(0).to_i
+  }
+  if uid == Mournmail.current_uid
+    window = Mournmail.message_window
+    if window.buffer.name == "*message*"
+      old_window = Window.current
+      begin
+        Window.current = window
+        scroll_down
+        return
+      ensure
+        Window.current = old_window
+      end
+    end
+  end
+end
+
+define_command(:mournmail_summary_reply,
+               doc: "Reply to the current message.") do
   |reply_all = current_prefix_arg|
   summary_buffer = Buffer.current
   uid = summary_buffer.save_excursion {
@@ -489,7 +513,7 @@ define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
   end
 end
 
-define_command(:mail_kill, doc: "Kill mail buffer.") do
+define_command(:mail_kill, doc: "Kill the mail buffer.") do
   if yes_or_no?("Kill current mail?")
     kill_buffer(Buffer.current, force: true)
   end
