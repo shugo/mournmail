@@ -196,15 +196,42 @@ module Mournmail
     end
   end
 
-  def self.text_body(mail)
-    body = if mail.multipart?
-      mail.text_part&.decoded
-    else
-      mail.body.decoded.encode(Encoding::UTF_8, mail.charset,
-                               replace: "?")
-    end.gsub(/\r\n/, "\n")
+  module MessageRendering
+    refine ::Mail::Message do
+      def render_body
+        if multipart?
+          parts.each_with_index.map { |part, i|
+            part.render([i])
+          }.join
+        else
+          body.decoded.encode(Encoding::UTF_8, charset, replace: "?").
+            gsub(/\r\n/, "\n")
+        end
+      end
+    end
+
+    refine ::Mail::Part do
+      def render(indices)
+        index = indices.join(".")
+        type = self["content-type"].to_s
+        "[#{index} #{type}]\n" +
+          if multipart?
+            parts.each_with_index.map { |part, i|
+              part.render([*indices, i])
+            }.join
+          else
+            if text?
+              decoded.sub(/(?<!\n)\z/, "\n")
+            else
+              ""
+            end
+          end
+      end
+    end
   end
 end
+
+using Mournmail::MessageRendering
 
 define_command(:mournmail, doc: "Start mournmail.") do
   mournmail_visit_mailbox("INBOX")
@@ -365,8 +392,8 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
     if mail["cc"]
       message.concat("Cc: #{mail['cc']}\n")
     end
-    message.concat("\n\n")
-    message.concat(Mournmail.text_body(mail))
+    message.concat("\n")
+    message.concat(mail.render_body)
     next_tick do
       message_buffer = Buffer.find_or_new("*message*",
                                           undo_limit: 0, read_only: true)
@@ -432,7 +459,7 @@ define_command(:mournmail_summary_reply,
   Mournmail.background do
     mailbox = Mournmail.current_mailbox
     mail = Mail.new(mournmail_read_mail(mailbox, uid))
-    body = Mournmail.text_body(mail)
+    body = mail.render_body
     next_tick do
       Window.current = Mournmail.message_window
       Commands.mail
