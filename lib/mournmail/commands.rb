@@ -355,15 +355,18 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
   Mournmail.background do
     mailbox = Mournmail.current_mailbox
     mail = Mail.new(mournmail_read_mail(mailbox, uid))
-    body = Mournmail.text_body(mail)
-    message = <<~EOF
-        Subject: #{mail["subject"]}
-        Date: #{mail["date"]}
-        From: #{mail["from"]}
-        To: #{mail["to"]}
-
-        #{body}
-      EOF
+    message = String.new
+    message.concat(<<~EOF)
+      Subject: #{mail["subject"]}
+      Date: #{mail["date"]}
+      From: #{mail["from"]}
+      To: #{mail["to"]}
+    EOF
+    if mail["cc"]
+      message.concat("Cc: #{mail['cc']}\n")
+    end
+    message.concat("\n\n")
+    message.concat(Mournmail.text_body(mail))
     next_tick do
       message_buffer = Buffer.find_or_new("*message*",
                                           undo_limit: 0, read_only: true)
