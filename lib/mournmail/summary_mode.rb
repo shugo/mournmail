@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+Face.define :seen, foreground: "blue"
 Face.define :unseen, bold: true
 Face.define :flagged, foreground: "yellow", bold: true
 
@@ -15,6 +16,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
 
+    define_syntax :seen, /^\d+  .*/
     define_syntax :unseen, /^\d+ u.*/
     define_syntax :flagged, /^\d+ \$.*/
 
