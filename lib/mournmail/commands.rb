@@ -494,6 +494,28 @@ define_command(:mournmail_summary_reply,
   end
 end
 
+define_command(:mournmail_message_save_part, doc: "Save the current part.") do
+  buffer = Buffer.current
+  buffer.save_excursion do
+    buffer.beginning_of_line
+    if buffer.looking_at?(/\[([0-9.]+) .*\]/)
+      indices = match_string(1).split(".").map(&:to_i)
+      part = Mournmail.current_mail
+      indices.each do |i|
+        part = part.parts[i]
+      end
+      default_name = part["content-disposition"]&.parameters["filename"] ||
+        part["content-type"]&.parameters["name"]
+      default_path = File.expand_path(default_name,
+                                      CONFIG[:mournmail_save_directory])
+      path = read_file_name("Save: ", default: default_path)
+      if !File.exist?(path) || yes_or_no?("File exists; overwrite?")
+        File.write(path, part.decoded)
+      end
+    end
+  end
+end
+
 define_command(:mail, doc: "Write a new mail.") do
   buffer = Buffer.new_buffer("*mail*")
   switch_to_buffer(buffer)
