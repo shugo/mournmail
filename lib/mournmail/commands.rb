@@ -499,13 +499,15 @@ define_command(:mournmail_message_save_part, doc: "Save the current part.") do
   buffer.save_excursion do
     buffer.beginning_of_line
     if buffer.looking_at?(/\[([0-9.]+) .*\]/)
-      indices = match_string(1).split(".").map(&:to_i)
+      index = match_string(1)
+      indices = index.split(".").map(&:to_i)
       part = Mournmail.current_mail
       indices.each do |i|
         part = part.parts[i]
       end
-      default_name = part["content-disposition"]&.parameters["filename"] ||
-        part["content-type"]&.parameters["name"]
+      default_name = part["content-disposition"]&.parameters&.[]("filename") ||
+        part["content-type"]&.parameters&.[]("name") ||
+        Mournmail.current_uid.to_s + "-" + index
       default_path = File.expand_path(default_name,
                                       CONFIG[:mournmail_save_directory])
       path = read_file_name("Save: ", default: default_path)
