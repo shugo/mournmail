@@ -381,9 +381,9 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
         Mournmail.current_summary.save
         summary_buffer.read_only_edit do
           summary_buffer.save_excursion do
-            summary_buffer.beginning_of_line
-            if summary_buffer.looking_at?(/^(\d+) u/)
-              summary_buffer.replace_match('\1  ')
+            summary_buffer.beginning_of_buffer
+            if summary_buffer.re_search_forward(/^#{uid} u/)
+              summary_buffer.replace_match("#{uid}  ")
             end
           end
         end
