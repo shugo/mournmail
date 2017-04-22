@@ -7,6 +7,7 @@ module Mournmail
 
     define_syntax :keyword, /^[A-Za-z\-]+: /
     define_syntax :comment, /^>.*/
+    define_syntax :link, /^\[([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*\]$/
 
     def initialize(buffer)
       super(buffer)
