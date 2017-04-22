@@ -12,6 +12,8 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("\C-?", :mournmail_summary_scroll_down)
     SUMMARY_MODE_MAP.define_key("a", :mournmail_summary_reply)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
+    SUMMARY_MODE_MAP.define_key("k", :previous_line)
+    SUMMARY_MODE_MAP.define_key("j", :next_line)
 
     define_syntax :unseen, /^\d+ u.*/
     define_syntax :flagged, /^\d+ \$.*/
