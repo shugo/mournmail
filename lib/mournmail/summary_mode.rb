@@ -11,6 +11,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key(:backspace, :mournmail_summary_scroll_down)
     SUMMARY_MODE_MAP.define_key("\C-h", :mournmail_summary_scroll_down)
     SUMMARY_MODE_MAP.define_key("\C-?", :mournmail_summary_scroll_down)
+    SUMMARY_MODE_MAP.define_key("w", :mournmail_summary_write)
     SUMMARY_MODE_MAP.define_key("a", :mournmail_summary_reply)
     SUMMARY_MODE_MAP.define_key("A", :mournmail_summary_reply)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)

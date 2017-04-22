@@ -41,6 +41,15 @@ module Mournmail
     windows[i]
   end
 
+  def self.back_to_summary
+    summary_window = Window.list.find { |window|
+      window.buffer.name == "*summary*"
+    }
+    if summary_window
+      Window.current = summary_window
+    end
+  end
+
   class Summary
     attr_reader :items, :last_uid
 
@@ -447,6 +456,12 @@ define_command(:mournmail_summary_scroll_down,
   end
 end
 
+define_command(:mournmail_summary_write,
+               doc: "Write a new mail.") do
+  Window.current = Mournmail.message_window
+  Commands.mail
+end
+
 define_command(:mournmail_summary_reply,
                doc: "Reply to the current message.") do
   |reply_all = current_prefix_arg|
@@ -556,6 +571,7 @@ define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
       m.deliver!
       next_tick do
         kill_buffer(buffer, force: true)
+        Mournmail.back_to_summary
         message("Mail sent.")
       end
     rescue Exception
@@ -570,5 +586,6 @@ end
 define_command(:mail_kill, doc: "Kill the mail buffer.") do
   if yes_or_no?("Kill current mail?")
     kill_buffer(Buffer.current, force: true)
+    Mournmail.back_to_summary
   end
 end
