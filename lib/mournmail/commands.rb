@@ -222,7 +222,8 @@ module Mournmail
     refine ::Mail::Part do
       def render(indices)
         index = indices.join(".")
-        type = self["content-type"].to_s
+        type = Mail::Encodings.decode_encode(self["content-type"].to_s,
+                                             :decode)
         "[#{index} #{type}]\n" +
           if multipart?
             parts.each_with_index.map { |part, i|
@@ -523,7 +524,8 @@ define_command(:mournmail_message_save_part, doc: "Save the current part.") do
       default_name = part["content-disposition"]&.parameters&.[]("filename") ||
         part["content-type"]&.parameters&.[]("name") ||
         Mournmail.current_uid.to_s + "-" + index
-      default_path = File.expand_path(default_name,
+      decoded_name = Mail::Encodings.decode_encode(default_name, :decode)
+      default_path = File.expand_path(decoded_name,
                                       CONFIG[:mournmail_save_directory])
       path = read_file_name("Save: ", default: default_path)
       if !File.exist?(path) || yes_or_no?("File exists; overwrite?")
