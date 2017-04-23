@@ -285,7 +285,12 @@ end
 
 define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
   |mailbox = read_from_minibuffer("Visit mailbox: ", default: "INBOX")|
-  message("Visiting #{mailbox} in background...")
+  mournmail_summary_sync(mailbox)
+end
+
+define_command(:mournmail_summary_sync, doc: "Sync summary.") do
+  |mailbox = (Mournmail.current_mailbox || "INBOX")|
+  message("Syncing #{mailbox} in background...")
   Mournmail.background do
     summary = mournmail_fetch_summary(mailbox)
     summary_text = String.new
@@ -306,7 +311,7 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
       Mournmail.current_summary = summary
       Mournmail.current_mail = nil
       Mournmail.current_uid = nil
-      message("Visited #{mailbox}")
+      message("Syncing #{mailbox} in background... Done")
       begin
         beginning_of_buffer
         re_search_forward(/^\d+ u/)
