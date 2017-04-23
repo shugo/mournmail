@@ -8,7 +8,10 @@ require "fileutils"
 
 module Mournmail
   def self.define_variable(name, value = nil)
-    instance_variable_set("@" + name.to_s, value)
+    var_name = "@" + name.to_s
+    if !instance_variable_defined?(var_name)
+      instance_variable_set(var_name, value)
+    end
     singleton_class.send(:attr_accessor, name)
   end
 
