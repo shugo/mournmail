@@ -7,9 +7,45 @@ Mournmail is a message user agent for
 
     $ gem install mournmail
 
+## Configuration
+
+```ruby
+# The default value of From:
+CONFIG[:mournmail_from] = "Shugo Maeda <shugo@example.com>"
+# The default charset
+CONFIG[:mournmail_charset] = "iso-2022-jp"
+# The delivery method for Mail#delivery_method
+CONFIG[:mournmail_delivery_method] = :smtp
+# The options for Mail#delivery_method
+CONFIG[:mournmail_delivery_options] = {
+  :address => "smtp.example.com",
+  :port => 465,
+  :domain => Socket.gethostname,
+  :user_name => "shugo",
+  :password => File.read("/path/to/smtp_passwd").chomp,
+  :authentication => "login",
+  :tls => true,
+  :ca_file => "/path/to/cacert.pem"
+}
+# The host for Net::IMAP#new
+CONFIG[:mournmail_imap_host] = "imap.example.com"
+# The options for Net::IMAP.new and
+# Net::IMAP#authenticate (auth_type, user_name, and password)
+CONFIG[:mournmail_imap_options] = {
+  ssl: {
+    :ca_file => File.expand_path("/path/to/cacert.pem")
+  },
+  auth_type: "PLAIN",
+  user_name: "shugo",
+  password: File.read("/path/to/imap_passwd").chomp
+}
+```
+
 ## Usage
 
 Type `M-x mail` to send a mail.
+
+Type `M-x mournmail` to visit INBOX.
 
 ## Development
 
