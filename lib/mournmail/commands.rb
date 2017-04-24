@@ -210,10 +210,28 @@ module Mournmail
 
   module MessageRendering
     refine ::Mail::Message do
-      def render_body
+      def render(indices = [])
+        render_header + "\n" + render_body(indices)
+      end
+
+      def render_header
+        s = String.new
+        s.concat(<<~EOF)
+          Subject: #{self["subject"]}
+          Date: #{self["date"]}
+          From: #{self["from"]}
+          To: #{self["to"]}
+        EOF
+        if self["cc"]
+          s.concat("Cc: #{self['cc']}\n")
+        end
+        s
+      end        
+
+      def render_body(indices = [])
         if multipart?
           parts.each_with_index.map { |part, i|
-            part.render([i])
+            part.render([*indices, i])
           }.join
         else
           body.decoded.encode(Encoding::UTF_8, charset, replace: "?").
@@ -232,6 +250,9 @@ module Mournmail
             parts.each_with_index.map { |part, i|
               part.render([*indices, i])
             }.join
+          elsif content_type == "message/rfc822"
+            mail = Mail.new(body.raw_source)
+            mail.render(indices)
           else
             if text?
               decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
@@ -272,16 +293,15 @@ def mournmail_fetch_summary(mailbox, all: false)
       summary = Mournmail::Summary.load_or_new(mailbox)
     end
     first_uid = (summary.last_uid || 0) + 1
-    if first_uid != imap.responses["UIDNEXT"]&.last
-      data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
-      data.each do |i|
-        uid = i.attr["UID"]
-        env = i.attr["ENVELOPE"]
-        flags = i.attr["FLAGS"]
-        item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject,
-                                          flags)
-        summary.add_item(item, env.message_id, env.in_reply_to)
-      end
+    data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
+    data.each do |i|
+      uid = i.attr["UID"]
+      next if summary[uid]
+      env = i.attr["ENVELOPE"]
+      flags = i.attr["FLAGS"]
+      item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject,
+                                        flags)
+      summary.add_item(item, env.message_id, env.in_reply_to)
     end
     summary
   end
@@ -405,18 +425,7 @@ define_command(:mournmail_summary_read, doc: "Read a mail.") do
   Mournmail.background do
     mailbox = Mournmail.current_mailbox
     mail = Mail.new(mournmail_read_mail(mailbox, uid))
-    message = String.new
-    message.concat(<<~EOF)
-      Subject: #{mail["subject"]}
-      Date: #{mail["date"]}
-      From: #{mail["from"]}
-      To: #{mail["to"]}
-    EOF
-    if mail["cc"]
-      message.concat("Cc: #{mail['cc']}\n")
-    end
-    message.concat("\n")
-    message.concat(mail.render_body)
+    message = mail.render
     next_tick do
       message_buffer = Buffer.find_or_new("*message*",
                                           undo_limit: 0, read_only: true)
