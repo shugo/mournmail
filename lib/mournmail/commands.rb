@@ -570,7 +570,13 @@ define_command(:mournmail_draft_send,
   header, body = s.split(/^--text follows this line--\n/)
   m = Mail.new(charset: charset)
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
-    m[name] = val
+    if name == "Attachments"
+      val.split(",").each do |file|
+        m.add_file(file)
+      end
+    else
+      m[name] = val
+    end
   end
   m.body = body
   m.delivery_method(CONFIG[:mournmail_delivery_method],
@@ -598,5 +604,25 @@ define_command(:mournmail_draft_kill, doc: "Kill the draft buffer.") do
   if yes_or_no?("Kill current draft?")
     kill_buffer(Buffer.current, force: true)
     Mournmail.back_to_summary
+  end
+end
+
+define_command(:mournmail_draft_attach_file, doc: "Attach a file.") do
+  |file_name = read_file_name("Attach file: ")|
+  buffer = Buffer.current
+  buffer.beginning_of_buffer
+  buffer.re_search_forward(/^--text follows this line--$/)
+  if buffer.re_search_backward(/^Attachments:/, raise_error: false)
+    if buffer.looking_at?(/Attachments: *\S+/)
+      buffer.end_of_line
+      buffer.insert(", #{file_name}")
+    else
+      buffer.end_of_line
+      buffer.insert(file_name)
+    end
+  else
+    buffer.beginning_of_line
+    buffer.insert("Attachments: #{file_name}\n")
+    buffer.backward_char
   end
 end

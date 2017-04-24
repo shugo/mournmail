@@ -5,6 +5,7 @@ module Mournmail
     MAIL_MODE_MAP = Keymap.new
     MAIL_MODE_MAP.define_key("\C-c\C-c", :mournmail_draft_send)
     MAIL_MODE_MAP.define_key("\C-c\C-k", :mournmail_draft_kill)
+    MAIL_MODE_MAP.define_key("\C-ca", :mournmail_draft_attach_file)
 
     def initialize(buffer)
       super(buffer)
