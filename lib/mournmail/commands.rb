@@ -242,6 +242,15 @@ module Mournmail
           end.gsub(/\r\n/, "\n")
         end
       end
+
+      def dig_part(i, *rest_indices)
+        part = parts[i]
+        if rest_indices.empty?
+          part
+        else
+          part.dig_part(*rest_indices)
+        end
+      end
     end
 
     refine ::Mail::Part do
@@ -264,6 +273,20 @@ module Mournmail
               ""
             end
           end
+      end
+
+      def dig_part(i, *rest_indices)
+        if content_type == "message/rfc822"
+          mail = Mail.new(body.raw_source)
+          mail.dig_part(i, *rest_indices)
+        else
+          part = parts[i]
+          if rest_indices.empty?
+            part
+          else
+            part.dig_part(*rest_indices)
+          end
+        end
       end
     end
   end
@@ -543,10 +566,7 @@ define_command(:mournmail_message_save_part, doc: "Save the current part.") do
     if buffer.looking_at?(/\[([0-9.]+) .*\]/)
       index = match_string(1)
       indices = index.split(".").map(&:to_i)
-      part = Mournmail.current_mail
-      indices.each do |i|
-        part = part.parts[i]
-      end
+      part = Mournmail.current_mail.dig_part(*indices)
       default_name = part["content-disposition"]&.parameters&.[]("filename") ||
         part["content-type"]&.parameters&.[]("name") ||
         Mournmail.current_uid.to_s + "-" + index
