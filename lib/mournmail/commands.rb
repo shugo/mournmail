@@ -567,8 +567,8 @@ define_command(:mournmail_draft_send,
   rescue Encoding::UndefinedConversionError
     charset = "utf-8"
   end
-  header, body = s.split(/^--text follows this line--\n/)
   m = Mail.new(charset: charset)
+  header, body = s.split(/^--text follows this line--\n/, 2)
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     if name == "Attachments"
       val.split(/\s*,\s*/).each do |file|
@@ -578,7 +578,11 @@ define_command(:mournmail_draft_send,
       m[name] = val
     end
   end
-  m.body = body
+  if body.empty?
+    return if !yes_or_no?("Body is empty.  Really send?")
+  else
+    m.body = body
+  end
   m.delivery_method(CONFIG[:mournmail_delivery_method],
                     CONFIG[:mournmail_delivery_options])
   buffer = Buffer.current
