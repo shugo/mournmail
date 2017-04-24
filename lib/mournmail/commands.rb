@@ -234,8 +234,12 @@ module Mournmail
             part.render([*indices, i])
           }.join
         else
-          body.decoded.encode(Encoding::UTF_8, charset, replace: "?").
-            gsub(/\r\n/, "\n")
+          s = body.decoded
+          if /\Autf-8\z/i =~ charset
+            s.force_encoding(Encoding::UTF_8).scrub("?")
+          else
+            s.encode(Encoding::UTF_8, charset, replace: "?")
+          end.gsub(/\r\n/, "\n")
         end
       end
     end
