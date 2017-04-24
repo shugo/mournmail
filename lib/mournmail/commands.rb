@@ -234,7 +234,7 @@ module Mournmail
             }.join
           else
             if text?
-              decoded.sub(/(?<!\n)\z/, "\n")
+              decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
             else
               ""
             end
