@@ -200,7 +200,7 @@ module Mournmail
     
     def decode_eword(s)
       Mail::Encodings.decode_encode(s, :decode).
-        encode(Encoding::UTF_8).tr("\t", " ")
+        encode(Encoding::UTF_8).gsub(/[\t\n]/, " ")
     rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
       s.b.gsub(/[\x80-\xff]/n) { |c|
         "<%02X>" % c.ord
