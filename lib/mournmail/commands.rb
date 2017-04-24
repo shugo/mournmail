@@ -544,9 +544,9 @@ define_command(:mournmail_message_save_part, doc: "Save the current part.") do
 end
 
 define_command(:mail, doc: "Write a new mail.") do
-  buffer = Buffer.new_buffer("*mail*")
+  buffer = Buffer.new_buffer("*draft*")
   switch_to_buffer(buffer)
-  mail_mode
+  draft_mode
   insert <<~EOF
     From: #{CONFIG[:mournmail_from]}
     To: 
@@ -558,7 +558,8 @@ define_command(:mail, doc: "Write a new mail.") do
   end_of_line
 end
 
-define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
+define_command(:mournmail_draft_send,
+               doc: "Send a mail and exit from mail buffer.") do
   s = Buffer.current.to_s
   charset = CONFIG[:mournmail_charset]
   begin
@@ -593,8 +594,8 @@ define_command(:mail_send, doc: "Send a mail and exit from mail buffer.") do
   end
 end
 
-define_command(:mail_kill, doc: "Kill the mail buffer.") do
-  if yes_or_no?("Kill current mail?")
+define_command(:mournmail_draft_kill, doc: "Kill the draft buffer.") do
+  if yes_or_no?("Kill current draft?")
     kill_buffer(Buffer.current, force: true)
     Mournmail.back_to_summary
   end
