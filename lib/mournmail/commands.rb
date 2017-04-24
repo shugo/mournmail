@@ -571,7 +571,7 @@ define_command(:mournmail_draft_send,
   m = Mail.new(charset: charset)
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     if name == "Attachments"
-      val.split(",").each do |file|
+      val.split(/\s*,\s*/).each do |file|
         m.add_file(file)
       end
     else
