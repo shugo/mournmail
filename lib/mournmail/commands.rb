@@ -263,10 +263,14 @@ def mournmail_imap_connect
   end
 end
 
-def mournmail_fetch_summary(mailbox)
+def mournmail_fetch_summary(mailbox, all: false)
   mournmail_imap_connect do |imap|
     imap.select(mailbox)
-    summary = Mournmail::Summary.load_or_new(mailbox)
+    if all
+      summary = Mournmail::Summary.new(mailbox)
+    else
+      summary = Mournmail::Summary.load_or_new(mailbox)
+    end
     first_uid = (summary.last_uid || 0) + 1
     if first_uid != imap.responses["UIDNEXT"]&.last
       data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
@@ -289,10 +293,11 @@ define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
 end
 
 define_command(:mournmail_summary_sync, doc: "Sync summary.") do
-  |mailbox = (Mournmail.current_mailbox || "INBOX")|
+  |mailbox = (Mournmail.current_mailbox || "INBOX"),
+    all = current_prefix_arg|
   message("Syncing #{mailbox} in background...")
   Mournmail.background do
-    summary = mournmail_fetch_summary(mailbox)
+    summary = mournmail_fetch_summary(mailbox, all: all)
     summary_text = String.new
     summary.items.each do |item|
       summary_text << item.to_s
