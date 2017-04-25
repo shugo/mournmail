@@ -267,7 +267,7 @@ module Mournmail
             mail = Mail.new(body.raw_source)
             mail.render(indices)
           else
-            if text?
+            if main_type == "text" && sub_type == "plain"
               decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
             else
               ""
