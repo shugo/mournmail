@@ -225,6 +225,9 @@ module Mournmail
         if self["cc"]
           s.concat("Cc: #{self['cc']}\n")
         end
+        if self["content-type"]
+          s.concat("Content-Type: #{self['content-type']}\n")
+        end
         s
       end        
 
