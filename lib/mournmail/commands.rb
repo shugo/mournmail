@@ -7,6 +7,13 @@ require "time"
 require "fileutils"
 
 module Mournmail
+  begin
+    require "mail-gpg"
+    HAVE_MAIL_GPG = true
+  rescue LoadError
+    HAVE_MAIL_GPG = false
+  end
+
   def self.define_variable(name, value = nil)
     var_name = "@" + name.to_s
     if !instance_variable_defined?(var_name)
@@ -232,6 +239,10 @@ module Mournmail
       end        
 
       def render_body(indices = [])
+        if HAVE_MAIL_GPG && encrypted?
+          mail = decrypt(verify: true)
+          return mail.render_body(indices)
+        end
         if multipart?
           parts.each_with_index.map { |part, i|
             part.render([*indices, i])
@@ -243,15 +254,32 @@ module Mournmail
           else
             s.encode(Encoding::UTF_8, charset, replace: "?")
           end.gsub(/\r\n/, "\n")
-        end
+        end + pgp_signature
       end
 
       def dig_part(i, *rest_indices)
+        if HAVE_MAIL_GPG && encrypted?
+          mail = decrypt(verify: true)
+          return mail.dig_part(i, *rest_indices)
+        end
         part = parts[i]
         if rest_indices.empty?
           part
         else
           part.dig_part(*rest_indices)
+        end
+      end
+
+      private
+
+      def pgp_signature 
+        if HAVE_MAIL_GPG && signed?
+          verified = verify
+          validity = verified.signature_valid? ? "Good" : "Bad"
+          from = verified.signatures.map{ |sig| sig.from }.join(", ")
+          "#{validity} signature from #{from}\n"
+        else
+          ""
         end
       end
     end
