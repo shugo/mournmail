@@ -222,20 +222,10 @@ module Mournmail
       end
 
       def render_header
-        s = String.new
-        s.concat(<<~EOF)
-          Subject: #{self["subject"]}
-          Date: #{self["date"]}
-          From: #{self["from"]}
-          To: #{self["to"]}
-        EOF
-        if self["cc"]
-          s.concat("Cc: #{self['cc']}\n")
-        end
-        if self["content-type"]
-          s.concat("Content-Type: #{self['content-type']}\n")
-        end
-        s
+        CONFIG[:mournmail_display_header_fields].map { |name|
+          val = self[name]
+          val ? "#{name}: #{val}\n" : ""
+        }.join
       end        
 
       def render_body(indices = [])
