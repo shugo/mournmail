@@ -609,6 +609,9 @@ define_command(:mournmail_message_save_part, doc: "Save the current part.") do
         part["content-type"]&.parameters&.[]("name") ||
         Mournmail.current_uid.to_s + "-" + index
       decoded_name = Mail::Encodings.decode_encode(default_name, :decode)
+      if /\A([A-Za-z0-9_\-]+)'(?:[A-Za-z0-9_\-])*'(.*)/ =~ decoded_name
+        decoded_name = $2.encode("utf-8", $1)
+      end
       default_path = File.expand_path(decoded_name,
                                       CONFIG[:mournmail_save_directory])
       path = read_file_name("Save: ", default: default_path)
