@@ -645,12 +645,11 @@ define_command(:mournmail_draft_send,
   end
   m = Mail.new(charset: charset)
   header, body = s.split(/^--text follows this line--\n/, 2)
+  attached_files = []
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     case name
     when "Attachments"
-      val.split(/\s*,\s*/).each do |file|
-        m.add_file(file)
-      end
+      attached_files = val.split(/\s*,\s*/)
     else
       m[name] = val
     end
@@ -658,7 +657,16 @@ define_command(:mournmail_draft_send,
   if body.empty?
     return if !yes_or_no?("Body is empty.  Really send?")
   else
-    m.body = body
+    if attached_files.empty?
+      m.body = body
+    else
+      part = Mail::Part.new(content_type: "text/plain", body: body)
+      part.charset = charset
+      m.body << part
+    end
+  end
+  attached_files.each do |file|
+    m.add_file(file)
   end
   m.delivery_method(CONFIG[:mournmail_delivery_method],
                     CONFIG[:mournmail_delivery_options])
