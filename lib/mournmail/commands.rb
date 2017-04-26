@@ -291,21 +291,7 @@ module Mournmail
         index = indices.join(".")
         type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                              :decode)
-        "[#{index} #{type}]\n" +
-          if multipart?
-            parts.each_with_index.map { |part, i|
-              part.render([*indices, i])
-            }.join
-          elsif content_type == "message/rfc822"
-            mail = Mail.new(body.raw_source)
-            mail.render(indices)
-          else
-            if main_type == "text" && sub_type == "plain"
-              decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
-            else
-              ""
-            end
-          end
+        "[#{index} #{type}]\n" + render_content(indices)
       end
 
       def dig_part(i, *rest_indices)
@@ -318,6 +304,25 @@ module Mournmail
             part
           else
             part.dig_part(*rest_indices)
+          end
+        end
+      end
+
+      private
+
+      def render_content(indices)
+        if multipart?
+          parts.each_with_index.map { |part, i|
+            part.render([*indices, i])
+          }.join
+        elsif content_type == "message/rfc822"
+          mail = Mail.new(body.raw_source)
+          mail.render(indices)
+        else
+          if main_type == "text" && sub_type == "plain"
+            decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+          else
+            ""
           end
         end
       end
