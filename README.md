@@ -13,7 +13,7 @@ Mournmail is a message user agent for
 # The default value of From:
 CONFIG[:mournmail_from] = "Shugo Maeda <shugo@example.com>"
 # The default charset
-CONFIG[:mournmail_charset] = "iso-2022-jp"
+CONFIG[:mournmail_charset] = "ISO-2022-JP"
 # The delivery method for Mail#delivery_method
 CONFIG[:mournmail_delivery_method] = :smtp
 # The options for Mail#delivery_method
