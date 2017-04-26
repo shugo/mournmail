@@ -276,7 +276,9 @@ module Mournmail
         if HAVE_MAIL_GPG && signed?
           verified = verify
           validity = verified.signature_valid? ? "Good" : "Bad"
-          from = verified.signatures.map{ |sig| sig.from }.join(", ")
+          from = verified.signatures.map { |sig|
+            sig.from rescue sig.fingerprint
+          }.join(", ")
           "#{validity} signature from #{from}\n"
         else
           ""
@@ -639,7 +641,8 @@ define_command(:mournmail_draft_send,
   m = Mail.new(charset: charset)
   header, body = s.split(/^--text follows this line--\n/, 2)
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
-    if name == "Attachments"
+    case name
+    when "Attachments"
       val.split(/\s*,\s*/).each do |file|
         m.add_file(file)
       end
