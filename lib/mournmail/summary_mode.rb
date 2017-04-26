@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-Face.define :seen, foreground: "blue"
-Face.define :unseen, bold: true
-Face.define :flagged, foreground: "yellow", bold: true
-
 module Mournmail
   class SummaryMode < Textbringer::Mode
     SUMMARY_MODE_MAP = Keymap.new
