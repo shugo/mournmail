@@ -11,6 +11,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("w", :mournmail_summary_write)
     SUMMARY_MODE_MAP.define_key("a", :mournmail_summary_reply)
     SUMMARY_MODE_MAP.define_key("A", :mournmail_summary_reply)
+    SUMMARY_MODE_MAP.define_key("f", :mournmail_summary_forward)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
