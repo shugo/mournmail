@@ -60,6 +60,15 @@ module Mournmail
     end
   end
 
+  def self.decode_eword(s)
+    Mail::Encodings.decode_encode(s, :decode).
+      encode(Encoding::UTF_8).gsub(/[\t\n]/, " ")
+  rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
+    s.b.gsub(/[\x80-\xff]/n) { |c|
+      "<%02X>" % c.ord
+    }
+  end
+
   class Summary
     attr_reader :items, :last_uid
 
@@ -206,12 +215,7 @@ module Mournmail
     end 
     
     def decode_eword(s)
-      Mail::Encodings.decode_encode(s, :decode).
-        encode(Encoding::UTF_8).gsub(/[\t\n]/, " ")
-    rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
-      s.b.gsub(/[\x80-\xff]/n) { |c|
-        "<%02X>" % c.ord
-      }
+      Mournmail.decode_eword(s)
     end
   end
 
@@ -600,7 +604,7 @@ define_command(:mournmail_summary_forward,
   Window.current = Mournmail.message_window
   Commands.mail
   re_search_forward(/^Subject: /)
-  insert("Forward: " + item.subject)
+  insert("Forward: " + Mournmail.decode_eword(item.subject))
   insert("\nAttach-Message: #{Mournmail.current_mailbox}/#{uid}")
   re_search_backward(/^To: /)
   end_of_line
@@ -661,8 +665,8 @@ define_command(:mournmail_draft_send,
   attached_message = nil
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     case name
-    when "Attachments"
-      attached_files = val.split(/\s*,\s*/)
+    when "Attach-File"
+      attached_files.push(val.strip)
     when "Attach-Message"
       attached_message = val.strip
     else
@@ -720,19 +724,10 @@ end
 define_command(:mournmail_draft_attach_file, doc: "Attach a file.") do
   |file_name = read_file_name("Attach file: ")|
   buffer = Buffer.current
-  buffer.beginning_of_buffer
-  buffer.re_search_forward(/^--text follows this line--$/)
-  if buffer.re_search_backward(/^Attachments:/, raise_error: false)
-    if buffer.looking_at?(/Attachments: *\S+/)
-      buffer.end_of_line
-      buffer.insert(", #{file_name}")
-    else
-      buffer.end_of_line
-      buffer.insert(file_name)
-    end
-  else
+  buffer.save_excursion do
+    buffer.beginning_of_buffer
+    buffer.re_search_forward(/^--text follows this line--$/)
     buffer.beginning_of_line
-    buffer.insert("Attachments: #{file_name}\n")
-    buffer.backward_char
+    buffer.insert("Attach-File: #{file_name}\n")
   end
 end
