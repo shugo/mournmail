@@ -605,7 +605,7 @@ define_command(:mournmail_summary_forward,
   Commands.mail
   re_search_forward(/^Subject: /)
   insert("Forward: " + Mournmail.decode_eword(item.subject))
-  insert("\nAttach-Message: #{Mournmail.current_mailbox}/#{uid}")
+  insert("\nAttached-Message: #{Mournmail.current_mailbox}/#{uid}")
   re_search_backward(/^To: /)
   end_of_line
 end
@@ -665,9 +665,9 @@ define_command(:mournmail_draft_send,
   attached_messages = []
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     case name
-    when "Attach-File"
+    when "Attached-File"
       attached_files.push(val.strip)
-    when "Attach-Message"
+    when "Attached-Message"
       attached_messages.push(val.strip)
     else
       m[name] = val
@@ -730,6 +730,6 @@ define_command(:mournmail_draft_attach_file, doc: "Attach a file.") do
     buffer.beginning_of_buffer
     buffer.re_search_forward(/^--text follows this line--$/)
     buffer.beginning_of_line
-    buffer.insert("Attach-File: #{file_name}\n")
+    buffer.insert("Attached-File: #{file_name}\n")
   end
 end
