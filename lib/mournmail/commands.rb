@@ -662,13 +662,13 @@ define_command(:mournmail_draft_send,
   m = Mail.new(charset: charset)
   header, body = s.split(/^--text follows this line--\n/, 2)
   attached_files = []
-  attached_message = nil
+  attached_messages = []
   header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
     case name
     when "Attach-File"
       attached_files.push(val.strip)
     when "Attach-Message"
-      attached_message = val.strip
+      attached_messages.push(val.strip)
     else
       m[name] = val
     end
@@ -676,7 +676,7 @@ define_command(:mournmail_draft_send,
   if body.empty?
     return if !yes_or_no?("Body is empty.  Really send?")
   else
-    if attached_files.empty? && attached_message.nil?
+    if attached_files.empty? && attached_messages.empty?
       m.body = body
     else
       part = Mail::Part.new(content_type: "text/plain", body: body)
@@ -693,11 +693,13 @@ define_command(:mournmail_draft_send,
   bury_buffer(buffer)
   background do
     begin
-      if attached_message
-        mailbox, uid = attached_message.strip.split("/")
-        s = mournmail_read_mail(mailbox, uid.to_i)
-        part = Mail::Part.new(content_type: "message/rfc822", body: s)
-        m.body << part
+      if !attached_messages.empty?
+        attached_messages.each do |attached_message|
+          mailbox, uid = attached_message.strip.split("/")
+          s = mournmail_read_mail(mailbox, uid.to_i)
+          part = Mail::Part.new(content_type: "message/rfc822", body: s)
+          m.body << part
+        end
       end
       m.deliver!
       next_tick do
