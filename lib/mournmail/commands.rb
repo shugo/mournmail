@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-using Mournmail::MessageRendering
-
 define_command(:mournmail, doc: "Start mournmail.") do
   mournmail_visit_mailbox("INBOX")
 end
