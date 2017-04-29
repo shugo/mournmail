@@ -68,66 +68,66 @@ module Mournmail
       "<%02X>" % c.ord
     }
   end
-end
 
-def mournmail_imap_connect
-  imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
-                       CONFIG[:mournmail_imap_options])
-  begin
-    imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] || "PLAIN",
-                      CONFIG[:mournmail_imap_options][:user_name],
-                      CONFIG[:mournmail_imap_options][:password])
-    yield(imap)
-  ensure
-    imap.disconnect
+  def self.imap_connect
+    imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
+                         CONFIG[:mournmail_imap_options])
+    begin
+      imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] || "PLAIN",
+                        CONFIG[:mournmail_imap_options][:user_name],
+                        CONFIG[:mournmail_imap_options][:password])
+      yield(imap)
+    ensure
+      imap.disconnect
+    end
   end
-end
 
-def mournmail_fetch_summary(mailbox, all: false)
-  mournmail_imap_connect do |imap|
-    imap.select(mailbox)
-    if all
-      summary = Mournmail::Summary.new(mailbox)
-    else
-      summary = Mournmail::Summary.load_or_new(mailbox)
-    end
-    first_uid = (summary.last_uid || 0) + 1
-    data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
-    data.each do |i|
-      uid = i.attr["UID"]
-      next if summary[uid]
-      env = i.attr["ENVELOPE"]
-      flags = i.attr["FLAGS"]
-      item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject,
-                                        flags)
-      summary.add_item(item, env.message_id, env.in_reply_to)
-    end
-    summary
-  end
-end
-
-def mournmail_read_mail(mailbox, uid)
-  path = File.expand_path("cache/#{mailbox}/#{uid}",
-                          CONFIG[:mournmail_directory])
-  begin
-    File.open(path) do |f|
-      f.flock(File::LOCK_SH)
-      f.read
-    end
-  rescue Errno::ENOENT
-    mournmail_imap_connect do |imap|
+  def self.fetch_summary(mailbox, all: false)
+    imap_connect do |imap|
       imap.select(mailbox)
-      data = imap.uid_fetch(uid, "BODY[]")
-      if data.empty?
-        raise EditorError, "No such mail: #{uid}"
+      if all
+        summary = Mournmail::Summary.new(mailbox)
+      else
+        summary = Mournmail::Summary.load_or_new(mailbox)
       end
-      s = data[0].attr["BODY[]"]
-      FileUtils.mkdir_p(File.dirname(path))
-      File.open(path, "w", 0600) do |f|
-        f.flock(File::LOCK_EX)
-        f.write(s)
+      first_uid = (summary.last_uid || 0) + 1
+      data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
+      data.each do |i|
+        uid = i.attr["UID"]
+        next if summary[uid]
+        env = i.attr["ENVELOPE"]
+        flags = i.attr["FLAGS"]
+        item = Mournmail::SummaryItem.new(uid, env.date, env.from, env.subject,
+                                          flags)
+        summary.add_item(item, env.message_id, env.in_reply_to)
       end
-      s
+      summary
+    end
+  end
+
+  def self.read_mail(mailbox, uid)
+    path = File.expand_path("cache/#{mailbox}/#{uid}",
+                            CONFIG[:mournmail_directory])
+    begin
+      File.open(path) do |f|
+        f.flock(File::LOCK_SH)
+        f.read
+      end
+    rescue Errno::ENOENT
+      imap_connect do |imap|
+        imap.select(mailbox)
+        data = imap.uid_fetch(uid, "BODY[]")
+        if data.empty?
+          raise EditorError, "No such mail: #{uid}"
+        end
+        s = data[0].attr["BODY[]"]
+        FileUtils.mkdir_p(File.dirname(path))
+        File.open(path, "w", 0600) do |f|
+          f.flock(File::LOCK_EX)
+          f.write(s)
+        end
+        s
+      end
     end
   end
 end

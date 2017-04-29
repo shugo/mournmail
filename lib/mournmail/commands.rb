@@ -14,7 +14,7 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
     all = current_prefix_arg|
   message("Syncing #{mailbox} in background...")
   Mournmail.background do
-    summary = mournmail_fetch_summary(mailbox, all: all)
+    summary = Mournmail.fetch_summary(mailbox, all: all)
     summary_text = String.new
     summary.items.each do |item|
       summary_text << item.to_s

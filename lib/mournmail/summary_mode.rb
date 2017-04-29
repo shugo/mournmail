@@ -57,7 +57,7 @@ module Mournmail
       end
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
-        mail = Mail.new(mournmail_read_mail(mailbox, uid))
+        mail = Mail.new(Mournmail.read_mail(mailbox, uid))
         message = mail.render
         next_tick do
           message_buffer = Buffer.find_or_new("*message*",
@@ -119,7 +119,7 @@ module Mournmail
       uid = selected_uid
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
-        mail = Mail.new(mournmail_read_mail(mailbox, uid))
+        mail = Mail.new(Mournmail.read_mail(mailbox, uid))
         body = mail.render_body
         next_tick do
           Window.current = Mournmail.message_window
