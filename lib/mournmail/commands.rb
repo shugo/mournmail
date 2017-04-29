@@ -54,6 +54,7 @@ define_command(:mournmail_quit, doc: "Quit mournmail.") do
   if buffer = Buffer["*message*"]
     kill_buffer(buffer)
   end
+  Mournmail.imap_disconnect
   Mournmail.current_mailbox = nil
   Mournmail.current_summary = nil
   Mournmail.current_mail = nil

@@ -69,16 +69,29 @@ module Mournmail
     }
   end
 
+  @imap = nil
+  @imap_mutex = Mutex.new
+
   def self.imap_connect
-    imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
-                         CONFIG[:mournmail_imap_options])
-    begin
-      imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] || "PLAIN",
-                        CONFIG[:mournmail_imap_options][:user_name],
-                        CONFIG[:mournmail_imap_options][:password])
+    @imap_mutex.synchronize do
+      if @imap.nil?
+        imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
+                             CONFIG[:mournmail_imap_options])
+        imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
+                          "PLAIN",
+                          CONFIG[:mournmail_imap_options][:user_name],
+                          CONFIG[:mournmail_imap_options][:password])
+      end
       yield(imap)
-    ensure
-      imap.disconnect
+    end
+  end
+
+  def self.imap_disconnect
+    @imap_mutex.synchronize do
+      if @imap
+        @imap.disconnect
+        @imap = nil
+      end
     end
   end
 
