@@ -75,14 +75,14 @@ module Mournmail
   def self.imap_connect
     @imap_mutex.synchronize do
       if @imap.nil?
-        imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
-                             CONFIG[:mournmail_imap_options])
-        imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
-                          "PLAIN",
-                          CONFIG[:mournmail_imap_options][:user_name],
-                          CONFIG[:mournmail_imap_options][:password])
+        @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
+                              CONFIG[:mournmail_imap_options])
+        @imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
+                           "PLAIN",
+                           CONFIG[:mournmail_imap_options][:user_name],
+                           CONFIG[:mournmail_imap_options][:password])
       end
-      yield(imap)
+      yield(@imap)
     end
   end
 

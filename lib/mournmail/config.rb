@@ -18,4 +18,5 @@ module Textbringer
     "X-Mailer",
     "Content-Type"
   ]
+  CONFIG[:mournmail_imap_connect_timeout] = 10
 end
