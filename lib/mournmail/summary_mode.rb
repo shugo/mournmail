@@ -28,33 +28,7 @@ module Mournmail
     end
 
     define_local_command(:summary_read, doc: "Read a mail.") do
-      begin
-        uid = selected_uid
-        if uid == Mournmail.current_uid
-          window = Mournmail.message_window
-          if window.buffer.name == "*message*"
-            old_window = Window.current
-            begin
-              Window.current = window
-              scroll_up
-              return
-            ensure
-              Window.current = old_window
-            end
-          end
-        end
-      rescue RangeError # may be raised by scroll_up
-        @buffer.end_of_line
-        if @buffer.end_of_buffer?
-          raise EditorError, "No more mail"
-        end
-        begin
-          @buffer.re_search_forward(/^\d+ u/)
-        rescue SearchError
-          @buffer.forward_line
-        end
-        retry
-      end
+      uid = scroll_up_or_next_uid
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
         mail = Mail.new(Mournmail.read_mail(mailbox, uid))
@@ -70,19 +44,7 @@ module Mournmail
           end
           window = Mournmail.message_window
           window.buffer = message_buffer
-          summary_item = Mournmail.current_summary[uid]
-          if summary_item && !summary_item.flags.include?(:Seen)
-            summary_item.set_flag(:Seen)
-            Mournmail.current_summary.save
-            @buffer.read_only_edit do
-              @buffer.save_excursion do
-                @buffer.beginning_of_buffer
-                if @buffer.re_search_forward(/^#{uid} u/)
-                  @buffer.replace_match("#{uid}  ")
-                end
-              end
-            end
-          end
+          mark_as_seen(uid)
           Mournmail.current_uid = uid
           Mournmail.current_mail = mail
         end
@@ -179,6 +141,53 @@ module Mournmail
         end
         match_string(0).to_i
       }
+    end
+
+    def scroll_up_or_next_uid
+      begin
+        uid = selected_uid
+        if uid == Mournmail.current_uid
+          window = Mournmail.message_window
+          if window.buffer.name == "*message*"
+            old_window = Window.current
+            begin
+              Window.current = window
+              scroll_up
+              return nil
+            ensure
+              Window.current = old_window
+            end
+          end
+        end
+        uid
+      rescue RangeError # may be raised by scroll_up
+        @buffer.end_of_line
+        if @buffer.end_of_buffer?
+          raise EditorError, "No more mail"
+        end
+        begin
+          @buffer.re_search_forward(/^\d+ u/)
+        rescue SearchError
+          @buffer.forward_line
+        end
+        retry
+      end
+    end
+
+    def mark_as_seen(uid)
+      summary_item = Mournmail.current_summary[uid]
+      if summary_item && !summary_item.flags.include?(:Seen)
+        summary_item.set_flag(:Seen)
+        Mournmail.current_summary.save
+        @buffer.read_only_edit do
+          @buffer.save_excursion do
+            @buffer.beginning_of_buffer
+            if @buffer.re_search_forward(/^#{uid} u/)
+              @buffer.replace_match("#{uid}  ")
+            end
+          end
+        end
+      end
     end
   end
 end
