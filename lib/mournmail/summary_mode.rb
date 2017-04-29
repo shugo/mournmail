@@ -28,13 +28,8 @@ module Mournmail
     end
 
     define_local_command(:summary_read, doc: "Read a mail.") do
-      summary_buffer = Buffer.current
       begin
-        uid = summary_buffer.save_excursion {
-          summary_buffer.beginning_of_line
-          return if !summary_buffer.looking_at?(/\d+/)
-          match_string(0).to_i
-        }
+        uid = selected_uid
         if uid == Mournmail.current_uid
           window = Mournmail.message_window
           if window.buffer.name == "*message*"
@@ -49,14 +44,14 @@ module Mournmail
           end
         end
       rescue RangeError # may be raised by scroll_up
-        summary_buffer.end_of_line
-        if summary_buffer.end_of_buffer?
+        @buffer.end_of_line
+        if @buffer.end_of_buffer?
           raise EditorError, "No more mail"
         end
         begin
-          summary_buffer.re_search_forward(/^\d+ u/)
+          @buffer.re_search_forward(/^\d+ u/)
         rescue SearchError
-          summary_buffer.forward_line
+          @buffer.forward_line
         end
         retry
       end
@@ -79,11 +74,11 @@ module Mournmail
           if summary_item && !summary_item.flags.include?(:Seen)
             summary_item.set_flag(:Seen)
             Mournmail.current_summary.save
-            summary_buffer.read_only_edit do
-              summary_buffer.save_excursion do
-                summary_buffer.beginning_of_buffer
-                if summary_buffer.re_search_forward(/^#{uid} u/)
-                  summary_buffer.replace_match("#{uid}  ")
+            @buffer.read_only_edit do
+              @buffer.save_excursion do
+                @buffer.beginning_of_buffer
+                if @buffer.re_search_forward(/^#{uid} u/)
+                  @buffer.replace_match("#{uid}  ")
                 end
               end
             end
@@ -96,12 +91,7 @@ module Mournmail
 
     define_local_command(:summary_scroll_down,
                          doc: "Scroll down the current message.") do
-      summary_buffer = Buffer.current
-      uid = summary_buffer.save_excursion {
-        summary_buffer.beginning_of_line
-        return if !summary_buffer.looking_at?(/\d+/)
-        match_string(0).to_i
-      }
+      uid = selected_uid
       if uid == Mournmail.current_uid
         window = Mournmail.message_window
         if window.buffer.name == "*message*"
@@ -126,12 +116,7 @@ module Mournmail
     define_local_command(:summary_reply,
                          doc: "Reply to the current message.") do
       |reply_all = current_prefix_arg|
-      summary_buffer = Buffer.current
-      uid = summary_buffer.save_excursion {
-        summary_buffer.beginning_of_line
-        return if !summary_buffer.looking_at?(/\d+/)
-        match_string(0).to_i
-      }
+      uid = selected_uid
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
         mail = Mail.new(mournmail_read_mail(mailbox, uid))
@@ -172,12 +157,7 @@ module Mournmail
 
     define_local_command(:summary_forward,
                          doc: "Forward the current message.") do
-      summary_buffer = Buffer.current
-      uid = summary_buffer.save_excursion {
-        summary_buffer.beginning_of_line
-        return if !summary_buffer.looking_at?(/\d+/)
-        match_string(0).to_i
-      }
+      uid = selected_uid
       summary = Mournmail.current_summary
       item = summary[uid]
       Window.current = Mournmail.message_window
@@ -187,6 +167,18 @@ module Mournmail
       insert("\nAttached-Message: #{Mournmail.current_mailbox}/#{uid}")
       re_search_backward(/^To: /)
       end_of_line
+    end
+
+    private
+
+    def selected_uid
+      uid = @buffer.save_excursion {
+        @buffer.beginning_of_line
+        if !@buffer.looking_at?(/\d+/)
+          raise EditorError, "No message found"
+        end
+        match_string(0).to_i
+      }
     end
   end
 end
