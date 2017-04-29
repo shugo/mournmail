@@ -5,6 +5,7 @@ require "mail-iso-2022-jp"
 require "net/imap"
 require "time"
 require "fileutils"
+require "timeout"
 
 module Mournmail
   begin
@@ -75,12 +76,14 @@ module Mournmail
   def self.imap_connect
     @imap_mutex.synchronize do
       if @imap.nil?
-        @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
-                              CONFIG[:mournmail_imap_options])
-        @imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
-                           "PLAIN",
-                           CONFIG[:mournmail_imap_options][:user_name],
-                           CONFIG[:mournmail_imap_options][:password])
+        Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
+          @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
+                                CONFIG[:mournmail_imap_options])
+          @imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
+                             "PLAIN",
+                             CONFIG[:mournmail_imap_options][:user_name],
+                             CONFIG[:mournmail_imap_options][:password])
+        end
       end
       yield(@imap)
     end
