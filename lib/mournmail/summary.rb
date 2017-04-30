@@ -90,9 +90,25 @@ module Mournmail
       s
     end
 
-    def set_flag(flag)
-      @flags.push(flag)
-      @line = nil
+    def set_flag(flag, update_server: true)
+      if !@flags.include?(flag)
+        update_flag("+", flag, update_server: update_server)
+      end
+    end
+
+    def unset_flag(flag, update_server: true)
+      if @flags.include?(flag)
+        update_flag("-", flag, update_server: update_server)
+      end
+    end
+
+    def toggle_flag(flag, update_server: true)
+      sign = @flags.include?(flag) ? "-" : "+"
+      update_flag(sign, flag, update_server: update_server)
+    end
+
+    def flags_char
+      format_flags(@flags)
     end
     
     private
@@ -151,6 +167,26 @@ module Mournmail
     
     def decode_eword(s)
       Mournmail.decode_eword(s)
+    end
+
+    def update_flag(sign, flag, update_server: true)
+      if update_server
+        Mournmail.imap_connect do |imap|
+          data = imap.uid_store(@uid, "#{sign}FLAGS", [flag]).first
+          @flags = data.attr["FLAGS"]
+        end
+      else
+        case
+        when "+"
+          @flags.push(flag)
+        when "-"
+          @flags.delete(flag)
+        end
+      end
+      if @line
+        s = format("%s %s", @uid, format_flags(@flags))
+        @line.sub!(/^\d+ ./, s)
+      end
     end
   end
 end

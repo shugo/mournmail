@@ -14,6 +14,8 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("a", :summary_reply_command)
     SUMMARY_MODE_MAP.define_key("A", :summary_reply_command)
     SUMMARY_MODE_MAP.define_key("f", :summary_forward_command)
+    SUMMARY_MODE_MAP.define_key("u", :summary_toggle_seen_command)
+    SUMMARY_MODE_MAP.define_key("$", :summary_toggle_flagged_command)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
@@ -131,6 +133,16 @@ module Mournmail
       end_of_line
     end
 
+    define_local_command(:summary_toggle_seen,
+                         doc: "Toggle Seen.") do
+      toggle_flag(selected_uid, :Seen)
+    end
+
+    define_local_command(:summary_toggle_flagged,
+                         doc: "Toggle Flagged.") do
+      toggle_flag(selected_uid, :Flagged)
+    end
+
     private
 
     def selected_uid
@@ -177,14 +189,29 @@ module Mournmail
     def mark_as_seen(uid)
       summary_item = Mournmail.current_summary[uid]
       if summary_item && !summary_item.flags.include?(:Seen)
-        summary_item.set_flag(:Seen)
+        summary_item.set_flag(:Seen, update_server: false)
         Mournmail.current_summary.save
-        @buffer.read_only_edit do
-          @buffer.save_excursion do
-            @buffer.beginning_of_buffer
-            if @buffer.re_search_forward(/^#{uid} u/)
-              @buffer.replace_match("#{uid}  ")
-            end
+        update_flags(summary_item)
+      end
+    end
+
+    def toggle_flag(uid, flag)
+      summary_item = Mournmail.current_summary[uid]
+      if summary_item
+        summary_item.toggle_flag(flag)
+        Mournmail.current_summary.save
+        update_flags(summary_item)
+      end
+    end
+
+    def update_flags(summary_item)
+      @buffer.read_only_edit do
+        @buffer.save_excursion do
+          @buffer.beginning_of_buffer
+          uid = summary_item.uid
+          flags_char = summary_item.flags_char
+          if @buffer.re_search_forward(/^#{uid} ./)
+            @buffer.replace_match("#{uid} #{flags_char}")
           end
         end
       end
