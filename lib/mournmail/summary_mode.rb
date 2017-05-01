@@ -17,6 +17,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("f", :summary_forward_command)
     SUMMARY_MODE_MAP.define_key("u", :summary_toggle_seen_command)
     SUMMARY_MODE_MAP.define_key("$", :summary_toggle_flagged_command)
+    SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
@@ -149,6 +150,28 @@ module Mournmail
     define_local_command(:summary_toggle_flagged,
                          doc: "Toggle Flagged.") do
       toggle_flag(selected_uid, :Flagged)
+    end
+
+    define_local_command(:summary_view_source,
+                         doc: "View source of a mail.") do
+      uid = selected_uid
+      Mournmail.background do
+        mailbox = Mournmail.current_mailbox
+        source = Mournmail.read_mail(mailbox, uid)
+        next_tick do
+          source_buffer = Buffer.find_or_new("*message-source*",
+                                             file_encoding: "ascii-8bit",
+                                             undo_limit: 0, read_only: true)
+          source_buffer.read_only_edit do
+            source_buffer.clear
+            source_buffer.insert(source.gsub(/\r\n/, "\n"))
+            source_buffer.file_format = :dos
+            source_buffer.beginning_of_buffer
+          end
+          window = Mournmail.message_window
+          window.buffer = source_buffer
+        end
+      end
     end
 
     private
