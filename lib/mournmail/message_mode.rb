@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+using Mournmail::MessageRendering
+
 module Mournmail
   class MessageMode < Textbringer::Mode
     MESSAGE_MODE_MAP = Keymap.new
