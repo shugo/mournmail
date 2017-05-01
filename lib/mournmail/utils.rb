@@ -87,12 +87,17 @@ module Mournmail
       end
       yield(@imap)
     end
+  rescue IOError => e
+    if e.message == "closed stream"
+      imap_disconnect
+    end
+    raise e
   end
 
   def self.imap_disconnect
     @imap_mutex.synchronize do
       if @imap
-        @imap.disconnect
+        @imap.disconnect rescue nil
         @imap = nil
       end
     end
