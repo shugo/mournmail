@@ -150,6 +150,8 @@ module Mournmail
       uid = @buffer.save_excursion {
         @buffer.beginning_of_line
         if !@buffer.looking_at?(/\d+/)
+          Mournmail.current_mail = nil
+          Mournmail.current_uid = nil
           raise EditorError, "No message found"
         end
         match_string(0).to_i
