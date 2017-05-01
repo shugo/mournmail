@@ -31,6 +31,7 @@ module Mournmail
 
     define_local_command(:summary_read, doc: "Read a mail.") do
       uid = scroll_up_or_next_uid
+      return if uid.nil?
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
         mail = Mail.new(Mournmail.read_mail(mailbox, uid))
