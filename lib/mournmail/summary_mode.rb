@@ -76,7 +76,7 @@ module Mournmail
 
     define_local_command(:summary_next,
                          doc: "Write a new mail.") do
-      @buffer.forward_line
+      next_message
       summary_read
     end
 
@@ -206,15 +206,7 @@ module Mournmail
         end
         uid
       rescue RangeError # may be raised by scroll_up
-        @buffer.end_of_line
-        if @buffer.end_of_buffer?
-          raise EditorError, "No more mail"
-        end
-        begin
-          @buffer.re_search_forward(/^\d+ u/)
-        rescue SearchError
-          @buffer.forward_line
-        end
+        next_message
         retry
       end
     end
@@ -247,6 +239,18 @@ module Mournmail
             @buffer.replace_match("#{uid} #{flags_char}")
           end
         end
+      end
+    end
+
+    def next_message
+      @buffer.end_of_line
+      if @buffer.end_of_buffer?
+        raise EditorError, "No more mail"
+      end
+      begin
+        @buffer.re_search_forward(/^\d+ u/)
+      rescue SearchError
+        @buffer.forward_line
       end
     end
   end
