@@ -10,6 +10,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key(:backspace, :summary_scroll_down_command)
     SUMMARY_MODE_MAP.define_key("\C-h", :summary_scroll_down_command)
     SUMMARY_MODE_MAP.define_key("\C-?", :summary_scroll_down_command)
+    SUMMARY_MODE_MAP.define_key("n", :summary_next_command)
     SUMMARY_MODE_MAP.define_key("w", :summary_write_command)
     SUMMARY_MODE_MAP.define_key("a", :summary_reply_command)
     SUMMARY_MODE_MAP.define_key("A", :summary_reply_command)
@@ -70,6 +71,12 @@ module Mournmail
           end
         end
       end
+    end
+
+    define_local_command(:summary_next,
+                         doc: "Write a new mail.") do
+      @buffer.forward_line
+      summary_read
     end
 
     define_local_command(:summary_write,
