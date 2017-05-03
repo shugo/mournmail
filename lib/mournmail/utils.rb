@@ -89,7 +89,7 @@ module Mournmail
     end
   rescue IOError, Errno::ECONNRESET
     imap_disconnect
-    raise e
+    raise
   end
 
   def self.imap_disconnect
