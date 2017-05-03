@@ -87,10 +87,8 @@ module Mournmail
       end
       yield(@imap)
     end
-  rescue IOError => e
-    if e.message == "closed stream"
-      imap_disconnect
-    end
+  rescue IOError, Errno::ECONNRESET
+    imap_disconnect
     raise e
   end
 
