@@ -75,7 +75,7 @@ module Mournmail
     end
 
     define_local_command(:summary_next,
-                         doc: "Write a new mail.") do
+                         doc: "Display the next mail.") do
       next_message
       summary_read
     end
