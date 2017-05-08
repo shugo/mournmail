@@ -62,6 +62,7 @@ define_command(:mournmail_quit, doc: "Quit mournmail.") do
 end
 
 define_command(:mail, doc: "Write a new mail.") do
+  |run_hooks: true|
   buffer = Buffer.new_buffer("*draft*")
   switch_to_buffer(buffer)
   draft_mode
@@ -74,4 +75,7 @@ define_command(:mail, doc: "Write a new mail.") do
   EOF
   re_search_backward(/^To:/)
   end_of_line
+  if run_hooks
+    run_hooks(:mournmail_draft_setup_hook)
+  end
 end

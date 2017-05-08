@@ -96,7 +96,7 @@ module Mournmail
         body = mail.render_body
         next_tick do
           Window.current = Mournmail.message_window
-          Commands.mail
+          Commands.mail(run_hooks: false)
           if reply_all
             insert(mail.from&.join(", "))
             cc_addrs = [mail.reply_to, mail.to, mail.cc].flat_map { |addrs|
@@ -124,6 +124,7 @@ module Mournmail
         #{mail['from']} wrote:
       EOF
           exchange_point_and_mark
+          run_hooks(:mournmail_draft_setup_hook)
         end
       end
     end
