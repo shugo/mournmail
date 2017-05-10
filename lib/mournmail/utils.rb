@@ -61,13 +61,17 @@ module Mournmail
     end
   end
 
-  def self.decode_eword(s)
-    Mail::Encodings.decode_encode(s, :decode).
-      encode(Encoding::UTF_8).gsub(/[\t\n]/, " ")
-  rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
+  def self.escape_binary(s)
     s.b.gsub(/[\x80-\xff]/n) { |c|
       "<%02X>" % c.ord
     }
+  end
+
+  def self.decode_eword(s)
+    Mail::Encodings.decode_encode(s, :decode).
+      encode(Encoding::UTF_8, replace: "?").gsub(/[\t\n]/, " ")
+  rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
+    escape_binary(s)
   end
 
   @imap = nil

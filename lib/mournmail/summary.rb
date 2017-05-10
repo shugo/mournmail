@@ -155,13 +155,16 @@ module Mournmail
     end
     
     def format_from(from)
-      addr = from[0]
-      if addr&.name
-        "#{decode_eword(addr.name)} <#{addr.mailbox}@#{addr.host}>"
-      elsif addr&.mailbox
-        "#{addr.mailbox}@#{addr.host}"
+      addr = from&.[](0)
+      if addr.nil? || addr.mailbox.nil?
+        return "Unknown sender"
+      end
+      mailbox = Mournmail.escape_binary(addr.mailbox)
+      host = Mournmail.escape_binary(addr.host.to_s)
+      if addr.name
+        "#{decode_eword(addr.name)} <#{mailbox}@#{host}>"
       else
-        "Unknown sender"
+        "#{mailbox}@#{host}"
       end
     end 
     
