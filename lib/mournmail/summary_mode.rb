@@ -21,6 +21,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
+    SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
 
     define_syntax :seen, /^\d+  .*/
     define_syntax :unseen, /^\d+ u.*/
