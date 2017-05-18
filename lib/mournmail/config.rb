@@ -20,5 +20,6 @@ module Textbringer
   ]
   CONFIG[:mournmail_imap_connect_timeout] = 10
   CONFIG[:mournmail_file_open_comamnd] = "xdg-open"
-  CONFIG[:mournmail_wait_time_before_temporary_file_remove] = 5
+  CONFIG[:mournmail_link_open_comamnd] = "xdg-open"
+  CONFIG[:mournmail_wait_time_before_temporary_file_remove] = 60
 end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 using Mournmail::MessageRendering
 
 module Mournmail
@@ -8,9 +10,12 @@ module Mournmail
     MESSAGE_MODE_MAP.define_key("\C-m", :message_open_link_or_part_command)
     MESSAGE_MODE_MAP.define_key("s", :message_save_part_command)
 
+    URI_REGEXP = URI.regexp(["http", "https", "ftp"])
+
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
     define_syntax :mime_part, /^\[([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*\]$/
+    define_syntax :link, URI_REGEXP
 
     def initialize(buffer)
       super(buffer)
@@ -20,20 +25,12 @@ module Mournmail
     define_local_command(:message_open_link_or_part,
                          doc: "Open a link or part.") do
       part = current_part
-      return if part.nil?
-      ext = part_file_name(part).slice(/\.([^.]+)\z/, 1)
-      if ext
-        file_name = ["mournmail", "." + ext]
+      if part
+        open_part(part)
       else
-        file_name = "mournmail"
-      end
-      background do
-        Tempfile.create(file_name) do |f|
-          f.write(part.decoded)
-          f.close
-          system(*CONFIG[:mournmail_file_open_comamnd], f.path,
-                 out: File::NULL, err: File::NULL)
-          sleep(CONFIG[:mournmail_wait_time_before_temporary_file_remove])
+        uri = current_uri
+        if uri
+          open_uri(uri)
         end
       end
     end
@@ -90,6 +87,42 @@ module Mournmail
     def part_extension(part)
       mime_type = part["content-type"].string
       MIME::Types[mime_type]&.first&.preferred_extension
+    end
+
+    def current_uri
+      @buffer.save_excursion do
+        pos = @buffer.point
+        @buffer.beginning_of_line
+        pos2 = @buffer.re_search_forward(URI_REGEXP, raise_error: false)
+        if pos2 && match_beginning(0) <= pos && pos < match_end(0)
+          match_string(0)
+        else
+          nil
+        end
+      end
+    end
+
+    def open_part(part)
+      ext = part_file_name(part).slice(/\.([^.]+)\z/, 1)
+      if ext
+        file_name = ["mournmail", "." + ext]
+      else
+        file_name = "mournmail"
+      end
+      background do
+        Tempfile.create(file_name) do |f|
+          f.write(part.decoded)
+          f.close
+          system(*CONFIG[:mournmail_file_open_comamnd], f.path,
+                 out: File::NULL, err: File::NULL)
+          sleep(CONFIG[:mournmail_wait_time_before_temporary_file_remove])
+        end
+      end
+    end
+
+    def open_uri(uri)
+      system(*CONFIG[:mournmail_link_open_comamnd], uri,
+             out: File::NULL, err: File::NULL)
     end
   end
 end
