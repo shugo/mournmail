@@ -94,6 +94,8 @@ module Mournmail
           parts.each_with_index.map { |part, i|
             part.render([*indices, i])
           }.join
+        elsif self["content-disposition"]&.disposition_type == "attachment"
+          ""
         elsif content_type == "message/rfc822"
           mail = Mail.new(body.raw_source)
           mail.render(indices)
