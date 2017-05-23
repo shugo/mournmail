@@ -109,17 +109,15 @@ module Mournmail
       else
         file_name = "mournmail"
       end
-      Tempfile.create(file_name) do |f|
-        f.write(part.decoded)
-        f.close
-        if ext == "txt"
-          find_file(f.path)
-        else
-          background do
-            system(*CONFIG[:mournmail_file_open_comamnd], f.path,
-                   out: File::NULL, err: File::NULL)
-            sleep(CONFIG[:mournmail_wait_time_before_temporary_file_remove])
-          end
+      f = Tempfile.open(file_name)
+      f.write(part.decoded)
+      f.close
+      if ext == "txt"
+        find_file(f.path)
+      else
+        background do
+          system(*CONFIG[:mournmail_file_open_comamnd], f.path,
+                 out: File::NULL, err: File::NULL)
         end
       end
     end
