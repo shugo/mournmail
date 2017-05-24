@@ -47,16 +47,17 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
 end
 
 define_command(:mournmail_quit, doc: "Quit mournmail.") do
+  th = Mournmail.background_thread
+  if th
+    return unless yes_or_no?("A background process is running. Kill it?")
+    th.kill
+  end
   delete_other_windows
   if buffer = Buffer["*summary*"]
     kill_buffer(buffer)
   end
   if buffer = Buffer["*message*"]
     kill_buffer(buffer)
-  end
-  th = Mournmail.background_thread
-  if th
-    th.kill
   end
   Mournmail.background do
     Mournmail.imap_disconnect
