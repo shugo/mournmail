@@ -2,6 +2,7 @@
 
 module Textbringer
   Face.define :seen, foreground: "blue"
+  Face.define :deleted, foreground: "green"
   Face.define :unseen, bold: true
   Face.define :flagged, foreground: "yellow", bold: true
   Face.define :field_name, foreground: "magenta", bold: true
