@@ -236,9 +236,13 @@ module Mournmail
     def toggle_flag(uid, flag)
       summary_item = Mournmail.current_summary[uid]
       if summary_item
-        summary_item.toggle_flag(flag)
-        Mournmail.current_summary.save
-        update_flags(summary_item)
+        Mournmail.background do
+          summary_item.toggle_flag(flag)
+          Mournmail.current_summary.save
+          next_tick do
+            update_flags(summary_item)
+          end
+        end
       end
     end
 
