@@ -123,6 +123,9 @@ module Mournmail
             addr = line.slice(/^\S+/)
             @buffer.delete_region(start_pos, end_pos)
             @buffer.insert(addr)
+          else
+            @buffer.goto_char(end_pos)
+            message("No match")
           end
         end
       else
