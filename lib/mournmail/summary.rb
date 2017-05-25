@@ -2,10 +2,13 @@
 
 require "time"
 require "fileutils"
+require "monitor"
 
 module Mournmail
   class Summary
     attr_reader :items, :last_uid
+
+    include MonitorMixin
 
     def self.cache_path(mailbox)
       File.expand_path("cache/#{mailbox}/.summary",
@@ -26,6 +29,7 @@ module Mournmail
     end
 
     def initialize(mailbox)
+      super()
       @mailbox = mailbox
       @items = []
       @message_id_table = {}
@@ -33,30 +37,65 @@ module Mournmail
       @last_uid = nil
     end
 
+    DUMPABLE_VARIABLES = [
+      :@mailbox,
+      :@items,
+      :@message_id_table,
+      :@uid_table,
+      :@last_uid
+    ]
+
+    def marshal_dump
+      DUMPABLE_VARIABLES.each_with_object({}) { |var, h|
+        h[var] = instance_variable_get(var)
+      }
+    end
+
+    def marshal_load(data)
+      mon_initialize
+      data.each do |var, val|
+        instance_variable_set(var, val)
+      end
+    end
+
     def add_item(item, message_id, in_reply_to)
-      parent = @message_id_table[in_reply_to]
-      if parent
-        parent.add_reply(item)
-      else
-        @items.push(item)
+      synchronize do
+        parent = @message_id_table[in_reply_to]
+        if parent
+          parent.add_reply(item)
+        else
+          @items.push(item)
+        end
+        if message_id
+          @message_id_table[message_id] = item
+        end
+        @uid_table[item.uid] = item
+        @last_uid = item.uid
       end
-      if message_id
-        @message_id_table[message_id] = item
-      end
-      @uid_table[item.uid] = item
-      @last_uid = item.uid
     end
 
     def [](uid)
-      @uid_table[uid]
+      synchronize do
+        @uid_table[uid]
+      end
     end
 
     def save
-      path = Summary.cache_path(@mailbox)
-      FileUtils.mkdir_p(File.dirname(path))
-      File.open(Summary.cache_path(@mailbox), "w", 0600) do |f|
-        f.flock(File::LOCK_EX)
-        Marshal.dump(self, f)
+      synchronize do
+        path = Summary.cache_path(@mailbox)
+        FileUtils.mkdir_p(File.dirname(path))
+        File.open(Summary.cache_path(@mailbox), "w", 0600) do |f|
+          f.flock(File::LOCK_EX)
+          Marshal.dump(self, f)
+        end
+      end
+    end
+
+    def to_s
+      synchronize do
+        items.each_with_object(String.new) do |item, s|
+          s << item.to_s
+        end
       end
     end
   end
