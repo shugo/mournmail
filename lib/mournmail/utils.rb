@@ -116,7 +116,7 @@ module Mournmail
       first_uid = (summary.last_uid || 0) + 1
       data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
       summary.synchronize do
-        data.each do |i|
+        data&.each do |i|
           uid = i.attr["UID"]
           next if summary[uid]
           env = i.attr["ENVELOPE"]

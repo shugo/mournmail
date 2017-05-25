@@ -32,11 +32,11 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
       Mournmail.current_uid = nil
       message("Syncing #{mailbox} in background... Done")
       begin
-        beginning_of_buffer
-        re_search_forward(/^\d+ u/)
+        buffer.beginning_of_buffer
+        buffer.re_search_forward(/^\d+ u/)
       rescue SearchError
-        end_of_buffer
-        re_search_backward(/^\d+ /)
+        buffer.end_of_buffer
+        buffer.re_search_backward(/^\d+ /, raise_error: false)
       end
       summary_read_command
     end
