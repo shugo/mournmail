@@ -74,6 +74,19 @@ module Mournmail
       end
     end
 
+    def delete_item_if(&block)
+      synchronize do
+        @items = @items.flat_map { |item|
+          item.delete_reply_if(&block)
+          if yield(item)
+            item.replies
+          else
+            [item]
+          end
+        }
+      end
+    end
+
     def [](uid)
       synchronize do
         @uid_table[uid]
@@ -116,6 +129,17 @@ module Mournmail
     
     def add_reply(reply)
       @replies << reply
+    end
+
+    def delete_reply_if(&block)
+      @replies = @replies.flat_map { |reply|
+        reply.delete_reply_if(&block)
+        if yield(reply)
+          reply.replies
+        else
+          [reply]
+        end
+      }
     end
     
     def to_s(limit = 78, from_limit = 16, level = 0)

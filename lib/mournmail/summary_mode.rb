@@ -20,6 +20,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("u", :summary_toggle_seen_command)
     SUMMARY_MODE_MAP.define_key("$", :summary_toggle_flagged_command)
     SUMMARY_MODE_MAP.define_key("d", :summary_toggle_deleted_command)
+    SUMMARY_MODE_MAP.define_key("x", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
@@ -163,6 +164,31 @@ module Mournmail
         Toggle Deleted.  Type `x` to expunge deleted messages.
       EOD
       toggle_flag(selected_uid, :Deleted)
+    end
+
+    define_local_command(:summary_expunge,
+                         doc: <<~EOD) do
+        Expunge deleted messages.
+      EOD
+      buffer = Buffer.current
+      Mournmail.background do
+        Mournmail.imap_connect do |imap|
+          imap.expunge
+        end
+        summary = Mournmail.current_summary
+        summary.delete_item_if do |item|
+          item.flags.include?(:Deleted)
+        end
+        summary_text = summary.to_s
+        summary.save
+        next_tick do
+          buffer.read_only_edit do
+            buffer.clear
+            buffer.insert(summary_text)
+          end
+          message("Expunged messages")
+        end
+      end
     end
 
     define_local_command(:summary_view_source,
