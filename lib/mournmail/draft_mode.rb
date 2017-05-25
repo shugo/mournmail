@@ -6,6 +6,7 @@ module Mournmail
     MAIL_MODE_MAP.define_key("\C-c\C-c", :draft_send_command)
     MAIL_MODE_MAP.define_key("\C-c\C-k", :draft_kill_command)
     MAIL_MODE_MAP.define_key("\C-ca", :draft_attach_file_command)
+    MAIL_MODE_MAP.define_key("\t", :draft_complete_or_insert_tab_command)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
@@ -101,6 +102,31 @@ module Mournmail
         @buffer.re_search_forward(/^--text follows this line--$/)
         @buffer.beginning_of_line
         @buffer.insert("Attached-File: #{file_name}\n")
+      end
+    end
+    
+    define_local_command(:draft_complete_or_insert_tab,
+                         doc: "Complete a mail address or insert a tab.") do
+      is_address_field = @buffer.save_excursion {
+        @buffer.beginning_of_line
+        @buffer.looking_at?(/(To|Cc|Bcc):/i)
+      }
+      if is_address_field
+        end_pos = @buffer.point
+        @buffer.skip_re_backward(/[^ :,]/)
+        start_pos = @buffer.point
+        s = @buffer.substring(start_pos, end_pos)
+        if !s.empty?
+          re = /^(.*")?#{Regexp.quote(s)}.*/
+          line = File.read(CONFIG[:mournmail_addresses_path]).slice(re)
+          if line
+            addr = line.slice(/^\S+/)
+            @buffer.delete_region(start_pos, end_pos)
+            @buffer.insert(addr)
+          end
+        end
+      else
+        @buffer.insert("\t")
       end
     end
   end
