@@ -74,7 +74,7 @@ module Mournmail
       end
 
       def dig_part(i, *rest_indices)
-        if content_type == "message/rfc822"
+        if main_type == "message" && sub_type == "rfc822"
           mail = Mail.new(body.raw_source)
           mail.dig_part(i, *rest_indices)
         else
@@ -94,11 +94,11 @@ module Mournmail
           parts.each_with_index.map { |part, i|
             part.render([*indices, i])
           }.join
-        elsif self["content-disposition"]&.disposition_type == "attachment"
-          ""
-        elsif content_type == "message/rfc822"
+        elsif main_type == "message" && sub_type == "rfc822"
           mail = Mail.new(body.raw_source)
           mail.render(indices)
+        elsif self["content-disposition"]&.disposition_type == "attachment"
+          ""
         else
           if main_type == "text" && sub_type == "plain"
             decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
