@@ -31,6 +31,7 @@ module Mournmail
     define_syntax :unseen, /^\d+ u.*/
     define_syntax :flagged, /^\d+ \$.*/
     define_syntax :deleted, /^\d+ d.*/
+    define_syntax :answered, /^\d+ a.*/
 
     def initialize(buffer)
       super(buffer)

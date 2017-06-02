@@ -208,6 +208,8 @@ module Mournmail
         "d"
       elsif flags.include?(:Flagged)
         "$"
+      elsif flags.include?(:Answered)
+        "a"
       elsif !flags.include?(:Seen)
         "u"
       else
