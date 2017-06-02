@@ -103,6 +103,9 @@ module Mournmail
     end
 
     def open_part(part)
+      if part.multipart?
+        raise EditorError, "Can't open a multipart entity."
+      end
       ext = part_file_name(part).slice(/\.([^.]+)\z/, 1)
       if ext
         file_name = ["mournmail", "." + ext]
