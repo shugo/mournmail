@@ -79,7 +79,7 @@ module Mournmail
 
   def self.imap_connect
     @imap_mutex.synchronize do
-      if @imap.nil?
+      if @imap.nil? || @imap.disconnected?
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
                                 CONFIG[:mournmail_imap_options])
