@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "uri"
-
 using Mournmail::MessageRendering
 
 module Mournmail
@@ -10,7 +8,7 @@ module Mournmail
     MESSAGE_MODE_MAP.define_key("\C-m", :message_open_link_or_part_command)
     MESSAGE_MODE_MAP.define_key("s", :message_save_part_command)
 
-    URI_REGEXP = URI.regexp(["http", "https", "ftp"])
+    URI_REGEXP = /(https?|ftp):\/\/[^ \t\n>)"]*[^] \t\n>.,:)"]+/
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
