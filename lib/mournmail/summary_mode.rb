@@ -108,7 +108,9 @@ module Mournmail
             insert(mail.from&.join(", "))
             cc_addrs = [mail.reply_to, mail.to, mail.cc].flat_map { |addrs|
               addrs || []
-            }.uniq
+            }.uniq.reject { |addr|
+              mail.from&.include?(addr)
+            }
             insert("\nCc: " + cc_addrs.join(", "))
           else
             insert(mail.reply_to&.join(", ") || mail.from&.join(", "))
