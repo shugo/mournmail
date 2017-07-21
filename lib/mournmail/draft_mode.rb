@@ -5,7 +5,7 @@ module Mournmail
     MAIL_MODE_MAP = Keymap.new
     MAIL_MODE_MAP.define_key("\C-c\C-c", :draft_send_command)
     MAIL_MODE_MAP.define_key("\C-c\C-k", :draft_kill_command)
-    MAIL_MODE_MAP.define_key("\C-ca", :draft_attach_file_command)
+    MAIL_MODE_MAP.define_key("\C-c\C-x\C-i", :draft_attach_file_command)
     MAIL_MODE_MAP.define_key("\t", :draft_complete_or_insert_tab_command)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
