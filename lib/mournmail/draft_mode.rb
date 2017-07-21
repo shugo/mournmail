@@ -19,6 +19,9 @@ module Mournmail
 
     define_local_command(:draft_send,
                          doc: "Send a mail and exit from mail buffer.") do
+      unless y_or_n?("Send this mail?")
+        return
+      end
       s = @buffer.to_s
       charset = CONFIG[:mournmail_charset]
       begin
