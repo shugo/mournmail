@@ -87,6 +87,9 @@ module Mournmail
                              "PLAIN",
                              CONFIG[:mournmail_imap_options][:user_name],
                              CONFIG[:mournmail_imap_options][:password])
+          if Mournmail.current_mailbox
+            @imap.select(Mournmail.current_mailbox)
+          end
         end
       end
       yield(@imap)
