@@ -178,7 +178,7 @@ module Mournmail
     def format_line(limit = 78, from_limit = 16, level = 0)
       space = "  " * (level < 8 ? level : 8)
       s = String.new
-      s << format("%s %s%s %s[ %s ] ",
+      s << format("%6d %s%s %s[ %s ] ",
                   @uid, format_flags(@flags), format_date(@date), space,
                   ljust(format_from(@from), from_limit))
       s << ljust(decode_eword(@subject.to_s), limit - Buffer.display_width(s))
@@ -241,20 +241,28 @@ module Mournmail
     def update_flag(sign, flag, update_server: true)
       if update_server
         Mournmail.imap_connect do |imap|
-          data = imap.uid_store(@uid, "#{sign}FLAGS", [flag]).first
-          @flags = data.attr["FLAGS"]
+          data = imap.uid_store(@uid, "#{sign}FLAGS", [flag])&.first
+          if data
+            @flags = data.attr["FLAGS"]
+          else
+            update_flag_local(sign, flag)
+          end
         end
       else
-        case
-        when "+"
-          @flags.push(flag)
-        when "-"
-          @flags.delete(flag)
-        end
+        update_flag_local(sign, flag)
       end
       if @line
-        s = format("%s %s", @uid, format_flags(@flags))
-        @line.sub!(/^\d+ ./, s)
+        s = format("%6d %s", @uid, format_flags(@flags))
+        @line.sub!(/^ *\d+ ./, s)
+      end
+    end
+
+    def update_flag_local(sign, flag)
+      case sign
+      when "+"
+        @flags.push(flag)
+      when "-"
+        @flags.delete(flag)
       end
     end
   end

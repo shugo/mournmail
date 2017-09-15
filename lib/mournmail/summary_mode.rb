@@ -27,11 +27,11 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("j", :next_line)
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
 
-    define_syntax :seen, /^\d+  .*/
-    define_syntax :unseen, /^\d+ u.*/
-    define_syntax :flagged, /^\d+ \$.*/
-    define_syntax :deleted, /^\d+ d.*/
-    define_syntax :answered, /^\d+ a.*/
+    define_syntax :seen, /^ *\d+  .*/
+    define_syntax :unseen, /^ *\d+ u.*/
+    define_syntax :flagged, /^ *\d+ \$.*/
+    define_syntax :deleted, /^ *\d+ d.*/
+    define_syntax :answered, /^ *\d+ a.*/
 
     def initialize(buffer)
       super(buffer)
@@ -43,7 +43,8 @@ module Mournmail
       return if uid.nil?
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
-        mail = Mail.new(Mournmail.read_mail(mailbox, uid))
+        s, fetched = Mournmail.read_mail(mailbox, uid)
+        mail = Mail.new(s)
         message = mail.render
         next_tick do
           message_buffer = Buffer.find_or_new("*message*",
@@ -56,7 +57,7 @@ module Mournmail
           end
           window = Mournmail.message_window
           window.buffer = message_buffer
-          mark_as_seen(uid)
+          mark_as_seen(uid, !fetched)
           Mournmail.current_uid = uid
           Mournmail.current_mail = mail
         end
@@ -99,7 +100,7 @@ module Mournmail
       uid = selected_uid
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
-        mail = Mail.new(Mournmail.read_mail(mailbox, uid))
+        mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
         body = mail.render_body
         next_tick do
           Window.current = Mournmail.message_window
@@ -199,7 +200,7 @@ module Mournmail
       uid = selected_uid
       Mournmail.background do
         mailbox = Mournmail.current_mailbox
-        source = Mournmail.read_mail(mailbox, uid)
+        source, = Mournmail.read_mail(mailbox, uid)
         next_tick do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
@@ -221,12 +222,12 @@ module Mournmail
     def selected_uid
       uid = @buffer.save_excursion {
         @buffer.beginning_of_line
-        if !@buffer.looking_at?(/\d+/)
+        if !@buffer.looking_at?(/ *\d+/)
           Mournmail.current_mail = nil
           Mournmail.current_uid = nil
           raise EditorError, "No message found"
         end
-        match_string(0).to_i
+        @buffer.match_string(0).to_i
       }
     end
 
@@ -253,10 +254,10 @@ module Mournmail
       end
     end
 
-    def mark_as_seen(uid)
+    def mark_as_seen(uid, update_server)
       summary_item = Mournmail.current_summary[uid]
       if summary_item && !summary_item.flags.include?(:Seen)
-        summary_item.set_flag(:Seen, update_server: false)
+        summary_item.set_flag(:Seen, update_server: update_server)
         Mournmail.current_summary.save
         update_flags(summary_item)
       end
@@ -281,8 +282,8 @@ module Mournmail
           @buffer.beginning_of_buffer
           uid = summary_item.uid
           flags_char = summary_item.flags_char
-          if @buffer.re_search_forward(/^#{uid} ./)
-            @buffer.replace_match("#{uid} #{flags_char}")
+          if @buffer.re_search_forward(/^( *#{uid}) ./)
+            @buffer.replace_match(@buffer.match_string(1) + " " + flags_char)
           end
         end
       end
@@ -294,7 +295,7 @@ module Mournmail
         raise EditorError, "No more mail"
       end
       begin
-        @buffer.re_search_forward(/^\d+ u/)
+        @buffer.re_search_forward(/^ *\d+ u/)
       rescue SearchError
         @buffer.forward_line
       end

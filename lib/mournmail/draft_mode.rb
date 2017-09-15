@@ -65,7 +65,7 @@ module Mournmail
           if !attached_messages.empty?
             attached_messages.each do |attached_message|
               mailbox, uid = attached_message.strip.split("/")
-              s = Mournmail.read_mail(mailbox, uid.to_i)
+              s, = Mournmail.read_mail(mailbox, uid.to_i)
               part = Mail::Part.new(content_type: "message/rfc822", body: s)
               m.body << part
             end

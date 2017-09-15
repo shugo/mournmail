@@ -144,7 +144,7 @@ module Mournmail
     begin
       File.open(path) do |f|
         f.flock(File::LOCK_SH)
-        f.read
+        [f.read, false]
       end
     rescue Errno::ENOENT
       imap_connect do |imap|
@@ -159,7 +159,7 @@ module Mournmail
           f.flock(File::LOCK_EX)
           f.write(s)
         end
-        s
+        [s, true]
       end
     end
   end
