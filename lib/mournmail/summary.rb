@@ -11,8 +11,7 @@ module Mournmail
     include MonitorMixin
 
     def self.cache_path(mailbox)
-      File.expand_path("cache/#{mailbox}/.summary",
-                       CONFIG[:mournmail_directory])
+      File.join(Mournmail.mailbox_cache_path(mailbox), ".summary")
     end
 
     def self.load(mailbox)
