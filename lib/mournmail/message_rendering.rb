@@ -29,9 +29,13 @@ module Mournmail
         else
           s = body.decoded
           if /\Autf-8\z/i =~ charset
-            s.force_encoding(Encoding::UTF_8).scrub("?")
+            force_utf8(s)
           else
-            s.encode(Encoding::UTF_8, charset, replace: "?")
+            begin
+              s.encode(Encoding::UTF_8, charset, replace: "?")
+            rescue Encoding::ConverterNotFoundError
+              force_utf8(s)
+            end
           end.gsub(/\r\n/, "\n")
         end + pgp_signature
       end
@@ -50,6 +54,10 @@ module Mournmail
       end
 
       private
+
+      def force_utf8(s)
+        s.force_encoding(Encoding::UTF_8).scrub("?")
+      end
 
       def pgp_signature 
         if HAVE_MAIL_GPG && signed?
@@ -75,7 +83,7 @@ module Mournmail
 
       def dig_part(i, *rest_indices)
         if main_type == "message" && sub_type == "rfc822"
-          mail = Mail.new(body.raw_source)
+          mail = Mail.new(body.body.to_s)
           mail.dig_part(i, *rest_indices)
         else
           part = parts[i]
