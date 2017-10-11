@@ -83,7 +83,7 @@ module Mournmail
 
       def dig_part(i, *rest_indices)
         if main_type == "message" && sub_type == "rfc822"
-          mail = Mail.new(body.body.to_s)
+          mail = Mail.new(body.to_s)
           mail.dig_part(i, *rest_indices)
         else
           part = parts[i]
