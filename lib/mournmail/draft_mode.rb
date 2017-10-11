@@ -30,6 +30,7 @@ module Mournmail
         charset = "utf-8"
       end
       m = Mail.new(charset: charset)
+      m.transport_encoding = "8bit"
       header, body = s.split(/^--text follows this line--\n/, 2)
       attached_files = []
       attached_messages = []
