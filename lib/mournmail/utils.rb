@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "mail"
-require "mail-iso-2022-jp"
 require "net/imap"
 require "time"
 require "fileutils"

@@ -23,7 +23,6 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "textbringer"
   spec.add_runtime_dependency "mail"
-  spec.add_runtime_dependency "mail-iso-2022-jp"
 
   spec.add_development_dependency "bundler", "~> 1.14"
   spec.add_development_dependency "rake", "~> 10.0"
