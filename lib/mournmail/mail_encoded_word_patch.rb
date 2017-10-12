@@ -31,6 +31,10 @@ module Mournmail
             s << word
             break if !line.empty? && line.bytesize + s.bytesize > limit
             words.shift
+            if prepend + line.bytesize + s.bytesize > 998
+              words.unshift(s.slice!(998 - prepend .. -1))
+              fold_line = true
+            end
           else
             words.shift
             encoded_text = base64_encode(word)
@@ -55,7 +59,7 @@ module Mournmail
           line << s
         end
         folded_lines << line
-        prepend = 0
+        prepend = 1 # Space will be prepended
       end
       folded_lines
     end
