@@ -33,15 +33,20 @@ module Mournmail
             words.shift
           else
             words.shift
-            encoded_text = Mail::Encodings::Base64.encode(word).chomp
+            encoded_text = base64_encode(word)
             min_size = line.bytesize + s.bytesize + b_encoding_extra_size
             new_size = min_size + encoded_text.bytesize
             if new_size > limit
-              n = (((limit - min_size) * 3.0 / 4.0) / 3.0).floor
-              break if n <= 0
-              word, rest = word.scan(/\A.{#{n}}|.+/)
-              words.unshift(rest) if rest
-              encoded_text = Mail::Encodings::Base64.encode(word).chomp
+              n = ((limit - min_size) * 3.0 / 4.0).floor
+              if n <= 0
+                words.unshift(word) if !line.empty?
+                break
+              end
+              truncated = word.byteslice(0, n).scrub("")
+              rest = word.byteslice(truncated.bytesize,
+                                    word.bytesize - truncated.bytesize)
+              words.unshift(rest)
+              encoded_text = base64_encode(truncated)
               fold_line = true
             end
             encoded_word = "=?#{charset}?B?#{encoded_text}?="
@@ -53,6 +58,10 @@ module Mournmail
         prepend = 0
       end
       folded_lines
+    end
+
+    def base64_encode(word)
+      Mail::Encodings::Base64.encode(word).gsub(/[\r\n]/, "")
     end
   end
 end
