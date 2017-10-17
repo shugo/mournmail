@@ -20,18 +20,20 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("u", :summary_toggle_seen_command)
     SUMMARY_MODE_MAP.define_key("$", :summary_toggle_flagged_command)
     SUMMARY_MODE_MAP.define_key("d", :summary_toggle_deleted_command)
+    SUMMARY_MODE_MAP.define_key("*", :summary_toggle_mark_command)
     SUMMARY_MODE_MAP.define_key("x", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
+    SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
 
-    define_syntax :seen, /^ *\d+  .*/
-    define_syntax :unseen, /^ *\d+ u.*/
-    define_syntax :flagged, /^ *\d+ \$.*/
-    define_syntax :deleted, /^ *\d+ d.*/
-    define_syntax :answered, /^ *\d+ a.*/
+    define_syntax :seen, /^ *\d+[ *] .*/
+    define_syntax :unseen, /^ *\d+[ *]u.*/
+    define_syntax :flagged, /^ *\d+[ *]\$.*/
+    define_syntax :deleted, /^ *\d+[ *]d.*/
+    define_syntax :answered, /^ *\d+[ *]a.*/
 
     def initialize(buffer)
       super(buffer)
@@ -45,22 +47,7 @@ module Mournmail
         mailbox = Mournmail.current_mailbox
         s, fetched = Mournmail.read_mail(mailbox, uid)
         mail = Mail.new(s)
-        message = mail.render
-        next_tick do
-          message_buffer = Buffer.find_or_new("*message*",
-                                              undo_limit: 0, read_only: true)
-          message_buffer.apply_mode(Mournmail::MessageMode)
-          message_buffer.read_only_edit do
-            message_buffer.clear
-            message_buffer.insert(message)
-            message_buffer.beginning_of_buffer
-          end
-          window = Mournmail.message_window
-          window.buffer = message_buffer
-          mark_as_seen(uid, !fetched)
-          Mournmail.current_uid = uid
-          Mournmail.current_mail = mail
-        end
+        show_mail(mail, uid)
       end
     end
 
@@ -170,6 +157,20 @@ module Mournmail
       toggle_flag(selected_uid, :Deleted)
     end
 
+    define_local_command(:summary_toggle_mark, doc: "Togge mark.") do
+      @buffer.read_only_edit do
+        @buffer.save_excursion do
+          @buffer.beginning_of_line
+          if @buffer.looking_at?(/( *\d+)([ *])/)
+            uid = @buffer.match_string(1)
+            old_mark = @buffer.match_string(2)
+            new_mark = old_mark == "*" ? " " : "*"
+            @buffer.replace_match(uid + new_mark)
+          end
+        end
+      end
+    end
+
     define_local_command(:summary_expunge,
                          doc: <<~EOD) do
         Expunge deleted messages.
@@ -217,6 +218,41 @@ module Mournmail
       end
     end
 
+    define_local_command(:summary_merge_partial,
+                         doc: "Merge marked message/partial.") do
+      uids = []
+      @buffer.save_excursion do
+        @buffer.beginning_of_buffer
+        while @buffer.re_search_forward(/^( *\d+)\*/, raise_error: false)
+          uid = @buffer.match_string(0).to_i
+          # @buffer.replace_match(@buffer.match_string(0) + " ")
+          uids.push(uid)
+        end
+      end
+      Mournmail.background do
+        mailbox = Mournmail.current_mailbox
+        id = nil
+        total = nil
+        mails = uids.map { |uid|
+          Mail.new(Mournmail.read_mail(mailbox, uid)[0])
+        }.select { |mail|
+          mail.main_type == "message" &&
+            mail.sub_type == "partial" #&&
+            (id ||= mail["Content-Type"].parameters["id"]) ==
+            mail["Content-Type"].parameters["id"] &&
+            (total ||= mail["Content-Type"].parameters["total"]&.to_i)
+        }.sort_by { |mail|
+          mail["Content-Type"].parameters["number"].to_i
+        }
+        if mails.length != total
+          raise EditorError, "No enough messages (#{mails.length} of #{total})"
+        end
+        s = mails.map { |mail| mail.body.decoded }.join
+        mail = Mail.new(s)
+        show_mail(mail)
+      end
+    end
+
     private
 
     def selected_uid
@@ -254,6 +290,27 @@ module Mournmail
       end
     end
 
+    def show_mail(mail, uid = nil)
+      message = mail.render
+      next_tick do
+        message_buffer = Buffer.find_or_new("*message*",
+                                            undo_limit: 0, read_only: true)
+        message_buffer.apply_mode(Mournmail::MessageMode)
+        message_buffer.read_only_edit do
+          message_buffer.clear
+          message_buffer.insert(message)
+          message_buffer.beginning_of_buffer
+        end
+        window = Mournmail.message_window
+        window.buffer = message_buffer
+        if uid
+          mark_as_seen(uid, !fetched)
+          Mournmail.current_uid = uid
+        end
+        Mournmail.current_mail = mail
+      end
+    end
+        
     def mark_as_seen(uid, update_server)
       summary_item = Mournmail.current_summary[uid]
       if summary_item && !summary_item.flags.include?(:Seen)
