@@ -47,7 +47,12 @@ module Mournmail
         mailbox = Mournmail.current_mailbox
         s, fetched = Mournmail.read_mail(mailbox, uid)
         mail = Mail.new(s)
-        show_mail(mail, uid)
+        next_tick do
+          show_message(mail)
+          mark_as_seen(uid, !fetched)
+          Mournmail.current_uid = uid
+          Mournmail.current_mail = mail
+        end
       end
     end
 
@@ -249,7 +254,11 @@ module Mournmail
         end
         s = mails.map { |mail| mail.body.decoded }.join
         mail = Mail.new(s)
-        show_mail(mail)
+        next_tick do
+          show_message(mail)
+          Mournmail.current_uid = nil
+          Mournmail.current_mail = mail
+        end
       end
     end
 
@@ -290,25 +299,18 @@ module Mournmail
       end
     end
 
-    def show_mail(mail, uid = nil)
-      message = mail.render
-      next_tick do
-        message_buffer = Buffer.find_or_new("*message*",
-                                            undo_limit: 0, read_only: true)
-        message_buffer.apply_mode(Mournmail::MessageMode)
-        message_buffer.read_only_edit do
-          message_buffer.clear
-          message_buffer.insert(message)
-          message_buffer.beginning_of_buffer
-        end
-        window = Mournmail.message_window
-        window.buffer = message_buffer
-        if uid
-          mark_as_seen(uid, !fetched)
-          Mournmail.current_uid = uid
-        end
-        Mournmail.current_mail = mail
+    def show_message(mail)
+      message_buffer = Buffer.find_or_new("*message*",
+                                          undo_limit: 0, read_only: true)
+      message_buffer.apply_mode(Mournmail::MessageMode)
+      message_buffer.read_only_edit do
+        message_buffer.clear
+        message_buffer.insert(mail.render)
+        message_buffer.beginning_of_buffer
       end
+      message_buffer[:mournmail_mail] = mail
+      window = Mournmail.message_window
+      window.buffer = message_buffer
     end
         
     def mark_as_seen(uid, update_server)

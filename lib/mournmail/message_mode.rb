@@ -53,7 +53,7 @@ module Mournmail
         if @buffer.looking_at?(/\[([0-9.]+) .*\]/)
           index = match_string(1)
           indices = index.split(".").map(&:to_i)
-          Mournmail.current_mail.dig_part(*indices)
+          @buffer[:mournmail_mail].dig_part(*indices)
         else
           nil
         end
