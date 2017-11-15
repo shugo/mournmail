@@ -72,16 +72,18 @@ module Mournmail
             end
           end
           m.deliver!
-          Mournmail.imap_connect do |imap|
-            outbox = CONFIG[:mournmail_outbox]
-            if outbox
+          next_tick do
+            message("Mail sent.")
+          end
+          outbox = CONFIG[:mournmail_outbox]
+          if outbox
+            Mournmail.imap_connect do |imap|
               imap.append(outbox, m.to_s, [:Seen])
             end
           end
           next_tick do
             kill_buffer(@buffer, force: true)
             Mournmail.back_to_summary
-            message("Mail sent.")
           end
         rescue Exception
           next_tick do
