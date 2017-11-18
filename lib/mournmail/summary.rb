@@ -10,15 +10,35 @@ module Mournmail
 
     include MonitorMixin
 
+    LOCK_OPERATIONS = Hash.new(:unknown_mode)
+    LOCK_OPERATIONS[:shared] = File::LOCK_SH
+    LOCK_OPERATIONS[:exclusive] = File::LOCK_EX
+
+    def self.lock_cache(mailbox, mode)
+      File.open(Summary.cache_lock_path(mailbox), "w", 0600) do |f|
+        f.flock(LOCK_OPERATIONS[mode])
+        yield
+      end
+    end
+
     def self.cache_path(mailbox)
       File.join(Mournmail.mailbox_cache_path(mailbox), ".summary")
     end
 
+    def self.cache_lock_path(mailbox)
+      cache_path(mailbox) + ".lock"
+    end
+
+    def self.cache_tmp_path(mailbox)
+      cache_path(mailbox) + ".tmp"
+    end
+
     def self.load(mailbox)
-      File.open(cache_path(mailbox)) { |f|
-        f.flock(File::LOCK_SH)
-        Marshal.load(f)
-      }
+      lock_cache(mailbox, :shared) do
+        File.open(cache_path(mailbox)) do |f|
+          Marshal.load(f)
+        end
+      end
     end
 
     def self.load_or_new(mailbox)
@@ -96,9 +116,13 @@ module Mournmail
       synchronize do
         path = Summary.cache_path(@mailbox)
         FileUtils.mkdir_p(File.dirname(path))
-        File.open(Summary.cache_path(@mailbox), "w", 0600) do |f|
-          f.flock(File::LOCK_EX)
-          Marshal.dump(self, f)
+        Summary.lock_cache(@mailbox, :exclusive) do
+          cache_path = Summary.cache_path(@mailbox)
+          tmp_path = Summary.cache_tmp_path(@mailbox)
+          File.open(tmp_path, "w", 0600) do |f|
+            Marshal.dump(self, f)
+          end
+          File.rename(tmp_path, cache_path)
         end
       end
     end
