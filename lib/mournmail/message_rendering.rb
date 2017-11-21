@@ -104,7 +104,8 @@ module Mournmail
         elsif main_type == "message" && sub_type == "rfc822"
           mail = Mail.new(body.raw_source)
           mail.render(indices)
-        elsif self["content-disposition"]&.disposition_type == "attachment"
+        elsif self["content-disposition"].is_a?(Mail::ContentDispositionField) &&
+            self["content-disposition"].disposition_type == "attachment"
           ""
         else
           if main_type == "text" && sub_type == "plain"
