@@ -7,6 +7,8 @@ module Mournmail
     MAIL_MODE_MAP.define_key("\C-c\C-k", :draft_kill_command)
     MAIL_MODE_MAP.define_key("\C-c\C-x\C-i", :draft_attach_file_command)
     MAIL_MODE_MAP.define_key("\t", :draft_complete_or_insert_tab_command)
+    MAIL_MODE_MAP.define_key("\C-c\C-xv", :draft_pgp_sign_command)
+    MAIL_MODE_MAP.define_key("\C-c\C-xe", :draft_pgp_encrypt_command)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
@@ -34,12 +36,18 @@ module Mournmail
       header, body = s.split(/^--text follows this line--\n/, 2)
       attached_files = []
       attached_messages = []
+      pgp_sign = false
+      pgp_encrypt = false
       header.scan(/^([!-9;-~]+):[ \t]*(.*(?:\n[ \t].*)*)\n/) do |name, val|
         case name
         when "Attached-File"
           attached_files.push(val.strip)
         when "Attached-Message"
           attached_messages.push(val.strip)
+        when "PGP-Sign"
+          pgp_sign = val.strip == "yes"
+        when "PGP-Encrypt"
+          pgp_encrypt = val.strip == "yes"
         else
           m[name] = val
         end
@@ -71,7 +79,10 @@ module Mournmail
               m.body << part
             end
           end
-          m.deliver!
+          if pgp_sign || pgp_encrypt
+            m.gpg(sign: pgp_sign, encrypt: pgp_encrypt)
+          end
+          m.deliver
           next_tick do
             message("Mail sent.")
           end
@@ -104,9 +115,7 @@ module Mournmail
     define_local_command(:draft_attach_file, doc: "Attach a file.") do
       |file_name = read_file_name("Attach file: ")|
       @buffer.save_excursion do
-        @buffer.beginning_of_buffer
-        @buffer.re_search_forward(/^--text follows this line--$/)
-        @buffer.beginning_of_line
+        end_of_header
         @buffer.insert("Attached-File: #{file_name}\n")
       end
     end
@@ -137,6 +146,28 @@ module Mournmail
       else
         @buffer.insert("\t")
       end
+    end
+    
+    define_local_command(:draft_pgp_sign, doc: "PGP sign.") do
+      @buffer.save_excursion do
+        end_of_header
+        @buffer.insert("PGP-Sign: yes\n")
+      end
+    end
+    
+    define_local_command(:draft_pgp_encrypt, doc: "PGP encrypt.") do
+      @buffer.save_excursion do
+        end_of_header
+        @buffer.insert("PGP-Encrypt: yes\n")
+      end
+    end
+
+    private
+
+    def end_of_header
+      @buffer.beginning_of_buffer
+      @buffer.re_search_forward(/^--text follows this line--$/)
+      @buffer.beginning_of_line
     end
   end
 end
