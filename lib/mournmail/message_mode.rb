@@ -13,7 +13,7 @@ module Mournmail
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
-    define_syntax :mime_part, /^\[([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*\]$/
+    define_syntax :mime_part, /^\[([0-9.]+|z) [A-Za-z._\-]+\/[A-Za-z._\-]+.*\]$/
     define_syntax :link, URI_REGEXP
 
     def initialize(buffer)

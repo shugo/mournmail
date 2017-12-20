@@ -19,7 +19,13 @@ module Mournmail
       def render_body(indices = [])
         if HAVE_MAIL_GPG && encrypted?
           mail = decrypt(verify: true)
-          return mail.render_body(indices)
+          if mail.signatures.empty?
+            sig = ""
+          else
+            sig = "[z application/pgp-signature]\n" +
+              signature_of(mail)
+          end
+          return mail.render_body(indices) + sig
         end
         if multipart?
           parts.each_with_index.map { |part, i|
@@ -61,14 +67,18 @@ module Mournmail
       def pgp_signature 
         if HAVE_MAIL_GPG && signed?
           verified = verify
-          validity = verified.signature_valid? ? "Good" : "Bad"
-          from = verified.signatures.map { |sig|
-            sig.from rescue sig.fingerprint
-          }.join(", ")
-          "#{validity} signature from #{from}\n"
+          signature_of(verified)
         else
           ""
         end
+      end
+
+      def signature_of(m)
+        validity = m.signature_valid? ? "Good" : "Bad"
+        from = m.signatures.map { |sig|
+          sig.from rescue sig.fingerprint
+        }.join(", ")
+        "#{validity} signature from #{from}\n"
       end
     end
 
