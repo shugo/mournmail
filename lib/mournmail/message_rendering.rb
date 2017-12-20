@@ -22,10 +22,10 @@ module Mournmail
           if mail.signatures.empty?
             sig = ""
           else
-            sig = "[z application/pgp-signature]\n" +
+            sig = "[PGP/MIME signature]\n" +
               signature_of(mail)
           end
-          return mail.render_body(indices) + sig
+          return "[PGP/MIME encrypted message]\n" + mail.render(indices) + sig
         end
         if multipart?
           parts.each_with_index.map { |part, i|
