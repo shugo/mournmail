@@ -78,7 +78,9 @@ module Mournmail
         from = m.signatures.map { |sig|
           sig.from rescue sig.fingerprint
         }.join(", ")
-        "#{validity} signature from #{from}\n"
+        s = "#{validity} signature from #{from}"
+        message(s)
+        s + "\n"
       end
     end
 
