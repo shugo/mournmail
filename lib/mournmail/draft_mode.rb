@@ -24,6 +24,7 @@ module Mournmail
       unless y_or_n?("Send this mail?")
         return
       end
+      run_hooks(:mournmail_pre_send_hook)
       s = @buffer.to_s
       charset = CONFIG[:mournmail_charset]
       begin
@@ -66,8 +67,8 @@ module Mournmail
       attached_files.each do |file|
         m.add_file(file)
       end
-      m.delivery_method(CONFIG[:mournmail_delivery_method],
-                        CONFIG[:mournmail_delivery_options])
+      m.delivery_method(@buffer[:mournmail_delivery_method],
+                        @buffer[:mournmail_delivery_options])
       bury_buffer(@buffer)
       background do
         begin
