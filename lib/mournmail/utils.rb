@@ -27,10 +27,11 @@ module Mournmail
   define_variable :current_uid
   define_variable :current_mail
   define_variable :background_thread
+  define_variable :keep_alive_thread
 
-  def self.background
+  def self.background(skip_if_busy: false)
     if background_thread&.alive?
-      raise EditorError, "Background thread already running"
+      return if skip_if_busy
     end
     self.background_thread = Utils.background {
       begin
@@ -39,6 +40,33 @@ module Mournmail
         self.background_thread = nil
       end
     }
+  end
+
+  def self.start_keep_alive_thread
+    if keep_alive_thread
+      raise EditorError, "Keep alive thread already running"
+    end
+    self.keep_alive_thread = Thread.start {
+      loop do
+        sleep(CONFIG[:mournmail_keep_alive_interval])
+        background(skip_if_busy: true) do
+          begin
+            imap_connect do |imap|
+              imap.noop
+            end
+          rescue => e
+            message("Error in IMAP NOOP: #{e.class}: #{e.message}")
+          end
+        end
+      end
+    }
+  end
+
+  def self.stop_keep_alive_thread
+    if keep_alive_thread
+      keep_alive_thread&.kill
+      self.keep_alive_thread = nil
+    end
   end
 
   def self.message_window
@@ -78,6 +106,9 @@ module Mournmail
 
   def self.imap_connect
     @imap_mutex.synchronize do
+      if keep_alive_thread.nil?
+        start_keep_alive_thread
+      end
       if @imap.nil? || @imap.disconnected?
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
@@ -100,6 +131,7 @@ module Mournmail
 
   def self.imap_disconnect
     @imap_mutex.synchronize do
+      stop_keep_alive_thread
       if @imap
         @imap.disconnect rescue nil
         @imap = nil

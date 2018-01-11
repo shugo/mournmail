@@ -19,6 +19,7 @@ module Textbringer
     "Content-Type"
   ]
   CONFIG[:mournmail_imap_connect_timeout] = 10
+  CONFIG[:mournmail_keep_alive_interval] = 60
   CONFIG[:mournmail_file_open_comamnd] = "xdg-open"
   CONFIG[:mournmail_link_open_comamnd] = "xdg-open"
   CONFIG[:mournmail_outbox] = nil
