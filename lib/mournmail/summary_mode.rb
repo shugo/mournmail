@@ -22,6 +22,11 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("d", :summary_toggle_deleted_command)
     SUMMARY_MODE_MAP.define_key("x", :summary_toggle_mark_command)
     SUMMARY_MODE_MAP.define_key("*a", :summary_mark_all_command)
+    SUMMARY_MODE_MAP.define_key("*n", :summary_unmark_all_command)
+    SUMMARY_MODE_MAP.define_key("*r", :summary_mark_read_command)
+    SUMMARY_MODE_MAP.define_key("*u", :summary_mark_unread_command)
+    SUMMARY_MODE_MAP.define_key("*s", :summary_mark_flagged_command)
+    SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
@@ -178,10 +183,28 @@ module Mournmail
     end
 
     define_local_command(:summary_mark_all, doc: "Mark all mails.") do
-      @buffer.read_only_edit do
-        s = @buffer.to_s.gsub(/^( *\d+) /, '\\1*')
-        @buffer.replace(s)
-      end
+      gsub_buffer(/^( *\d+) /, '\\1*')
+    end
+
+    define_local_command(:summary_unmark_all, doc: "Unmark all mails.") do
+      gsub_buffer(/^( *\d+)\*/, '\\1 ')
+    end
+
+    define_local_command(:summary_mark_read, doc: "Mark read mails.") do
+      gsub_buffer(/^( *\d+) ([^u])/, '\\1*\\2')
+    end
+
+    define_local_command(:summary_mark_unread, doc: "Mark unread mails.") do
+      gsub_buffer(/^( *\d+) u/, '\\1*u')
+    end
+
+    define_local_command(:summary_mark_flagged, doc: "Mark flagged mails.") do
+      gsub_buffer(/^( *\d+) \$/, '\\1*$')
+    end
+
+    define_local_command(:summary_mark_unflagged,
+                         doc: "Mark unflagged mails.") do
+      gsub_buffer(/^( *\d+) ([^$])/, '\\1*\\2')
     end
 
     define_local_command(:summary_expunge,
@@ -365,6 +388,13 @@ module Mournmail
         @buffer.re_search_forward(/^ *\d+ u/)
       rescue SearchError
         @buffer.forward_line
+      end
+    end
+
+    def gsub_buffer(re, s)
+      @buffer.read_only_edit do
+        s = @buffer.to_s.gsub(re, s)
+        @buffer.replace(s)
       end
     end
   end
