@@ -20,8 +20,9 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("u", :summary_toggle_seen_command)
     SUMMARY_MODE_MAP.define_key("$", :summary_toggle_flagged_command)
     SUMMARY_MODE_MAP.define_key("d", :summary_toggle_deleted_command)
-    SUMMARY_MODE_MAP.define_key("*", :summary_toggle_mark_command)
-    SUMMARY_MODE_MAP.define_key("x", :summary_expunge_command)
+    SUMMARY_MODE_MAP.define_key("x", :summary_toggle_mark_command)
+    SUMMARY_MODE_MAP.define_key("*a", :summary_mark_all_command)
+    SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
     SUMMARY_MODE_MAP.define_key("q", :mournmail_quit)
@@ -162,7 +163,7 @@ module Mournmail
       toggle_flag(selected_uid, :Deleted)
     end
 
-    define_local_command(:summary_toggle_mark, doc: "Togge mark.") do
+    define_local_command(:summary_toggle_mark, doc: "Toggle mark.") do
       @buffer.read_only_edit do
         @buffer.save_excursion do
           @buffer.beginning_of_line
@@ -173,6 +174,13 @@ module Mournmail
             @buffer.replace_match(uid + new_mark)
           end
         end
+      end
+    end
+
+    define_local_command(:summary_mark_all, doc: "Mark all mails.") do
+      @buffer.read_only_edit do
+        s = @buffer.to_s.gsub(/^( *\d+) /, '\\1*')
+        @buffer.replace(s)
       end
     end
 
