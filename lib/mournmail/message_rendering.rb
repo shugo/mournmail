@@ -11,7 +11,7 @@ module Mournmail
 
       def render_header
         CONFIG[:mournmail_display_header_fields].map { |name|
-          val = self[name]
+          val = self[name]&.to_s&.gsub(/\t/, " ")
           val ? "#{name}: #{val}\n" : ""
         }.join
       end        

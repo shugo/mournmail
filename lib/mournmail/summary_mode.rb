@@ -115,7 +115,7 @@ module Mournmail
             insert(mail.reply_to&.join(", ") || mail.from&.join(", "))
           end
           re_search_forward(/^Subject: /)
-          subject = mail["subject"].to_s
+          subject = mail["subject"].to_s.gsub(/\t/, " ")
           if /\Are:/i !~ subject
             insert("Re: ")
           end
