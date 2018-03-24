@@ -27,6 +27,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("*u", :summary_mark_unread_command)
     SUMMARY_MODE_MAP.define_key("*s", :summary_mark_flagged_command)
     SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
+    SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
@@ -289,6 +290,45 @@ module Mournmail
           show_message(mail)
           Mournmail.current_uid = nil
           Mournmail.current_mail = mail
+        end
+      end
+    end
+
+    define_local_command(:summary_archive,
+                         doc: "Archive marked mails.") do
+      uids = @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
+      summary = Mournmail.current_summary
+      items = uids.map { |uid| summary[uid] }
+      now = Time.now
+      mailboxes = items.group_by { |item|
+        t = Time.parse(item.date) rescue now
+        t.strftime(CONFIG[:mournmail_archive_mailbox_format])
+      }
+      source_mailbox = Mournmail.current_mailbox
+      Mournmail.background do
+        Mournmail.imap_connect do |imap|
+          mailboxes.each do |mailbox, items|
+            unless imap.list("", mailbox)
+              imap.create(mailbox)
+            end
+            total = items.size
+            count = 0
+            items.each_slice(1000) do |item_set|
+              uid_set = item_set.map(&:uid)
+              imap.uid_copy(uid_set, mailbox)
+              imap.uid_store(uid_set, "+FLAGS", [:Deleted])
+              count += item_set.size
+              progress = (count.to_f * 100 / total).round
+              next_tick do
+                message("#{mailbox}: #{progress}%")
+              end
+            end
+          end
+          imap.expunge
+        end
+        next_tick do
+          mournmail_summary_sync(source_mailbox, true)
+          message("Done")
         end
       end
     end
