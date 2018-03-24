@@ -298,29 +298,27 @@ module Mournmail
                          doc: "Archive marked mails.") do
       uids = @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
       summary = Mournmail.current_summary
-      items = uids.map { |uid| summary[uid] }
       now = Time.now
-      mailboxes = items.group_by { |item|
+      mailboxes = uids.map { |uid| summary[uid] }.group_by { |item|
         t = Time.parse(item.date) rescue now
         t.strftime(CONFIG[:mournmail_archive_mailbox_format])
       }
       source_mailbox = Mournmail.current_mailbox
       Mournmail.background do
         Mournmail.imap_connect do |imap|
+          count = 0
           mailboxes.each do |mailbox, items|
             unless imap.list("", mailbox)
               imap.create(mailbox)
             end
-            total = items.size
-            count = 0
             items.each_slice(1000) do |item_set|
               uid_set = item_set.map(&:uid)
               imap.uid_copy(uid_set, mailbox)
               imap.uid_store(uid_set, "+FLAGS", [:Deleted])
               count += item_set.size
-              progress = (count.to_f * 100 / total).round
+              progress = (count.to_f * 100 / uids.size).round
               next_tick do
-                message("#{mailbox}: #{progress}%")
+                message("Archiving mails... #{progress}%")
               end
             end
           end
