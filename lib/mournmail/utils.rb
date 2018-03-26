@@ -103,6 +103,7 @@ module Mournmail
 
   @imap = nil
   @imap_mutex = Mutex.new
+  @mailboxes = []
 
   def self.imap_connect
     @imap_mutex.synchronize do
@@ -117,6 +118,9 @@ module Mournmail
                              "PLAIN",
                              CONFIG[:mournmail_imap_options][:user_name],
                              CONFIG[:mournmail_imap_options][:password])
+          @mailboxes = @imap.list("", "*").map { |mbox|
+            Net::IMAP.decode_utf7(mbox.name)
+          }
           if Mournmail.current_mailbox
             @imap.select(Mournmail.current_mailbox)
           end
@@ -193,5 +197,13 @@ module Mournmail
         [s, true]
       end
     end
+  end
+
+  def self.read_mailbox_name(prompt, **opts)
+    f = ->(s) {
+      complete_for_minibuffer(s, @mailboxes)
+    }
+    mailbox = read_from_minibuffer(prompt, completion_proc: f, **opts)
+    Net::IMAP.encode_utf7(mailbox)
   end
 end

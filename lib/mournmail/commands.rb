@@ -5,7 +5,7 @@ define_command(:mournmail, doc: "Start mournmail.") do
 end
 
 define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
-  |mailbox = read_from_minibuffer("Visit mailbox: ", default: "INBOX")|
+  |mailbox = Mournmail.read_mailbox_name("Visit mailbox: ", default: "INBOX")|
   mournmail_summary_sync(mailbox)
 end
 
