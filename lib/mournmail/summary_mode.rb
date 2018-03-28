@@ -304,6 +304,9 @@ module Mournmail
         t.strftime(CONFIG[:mournmail_archive_mailbox_format])
       }
       source_mailbox = Mournmail.current_mailbox
+      if mailboxes.key?(source_mailbox)
+        raise EditorError, "Can't archive mails in archive mailboxes"
+      end
       Mournmail.background do
         Mournmail.imap_connect do |imap|
           count = 0
