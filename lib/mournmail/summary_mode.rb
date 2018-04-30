@@ -362,7 +362,9 @@ module Mournmail
     end
     
     define_local_command(:summary_search) do
-      |query = read_from_minibuffer("Search mail: ")|
+      |query = read_from_minibuffer("Search mail: ",
+                                    initial_value: @buffer[:query]),
+        page = 1|
       words = query.split
       if words.empty?
         raise EditorError, "No word given"
@@ -382,24 +384,10 @@ module Mournmail
               e & (m.body =~ word)
             end
           }
-        }.sort([key: "date", order: "descending"]).take(100)
-        summary_text = messages.map { |m|
-          format("%s [ %s ] %s\n",
-                 m.date.strftime("%m/%d %H:%M"),
-                 ljust(m.from, 16),
-                 ljust(m.subject, 45))
-        }.join
+        }.paginate([["date", :desc]], page: page, size: 100)
         next_tick do
-          buffer = Buffer.find_or_new("*search result*", undo_limit: 0,
-                                      read_only: true)
-          buffer.apply_mode(Mournmail::SearchResultMode)
-          buffer.read_only_edit do
-            buffer.clear
-            buffer.insert(summary_text)
-            buffer.beginning_of_buffer
-          end
-          buffer[:messages] = messages
-          switch_to_buffer(buffer)
+          show_search_result(messages, query)
+          message("Searched (#{messages.current_page}/#{messages.n_pages})")
         end
       end
     end
@@ -596,6 +584,26 @@ module Mournmail
                         list_id: header_text(list_id),
                         body: body_text(mail))
       end
+    end
+
+    def show_search_result(messages, query)
+      summary_text = messages.map { |m|
+        format("%s [ %s ] %s\n",
+               m.date.strftime("%m/%d %H:%M"),
+               ljust(m.from, 16),
+               ljust(m.subject, 45))
+      }.join
+      buffer = Buffer.find_or_new("*search result*", undo_limit: 0,
+                                  read_only: true)
+      buffer.apply_mode(Mournmail::SearchResultMode)
+      buffer.read_only_edit do
+        buffer.clear
+        buffer.insert(summary_text)
+        buffer.beginning_of_buffer
+      end
+      buffer[:messages] = messages
+      buffer[:query] = query
+      switch_to_buffer(buffer)
     end
 
     def ljust(s, n)

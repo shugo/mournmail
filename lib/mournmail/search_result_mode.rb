@@ -20,6 +20,9 @@ module Mournmail
     SEARCH_RESULT_MODE_MAP.define_key("u", :search_result_close_command)
     SEARCH_RESULT_MODE_MAP.define_key("k", :previous_line)
     SEARCH_RESULT_MODE_MAP.define_key("j", :next_line)
+    SEARCH_RESULT_MODE_MAP.define_key("<", :previous_page_command)
+    SEARCH_RESULT_MODE_MAP.define_key(">", :next_page_command)
+    SEARCH_RESULT_MODE_MAP.define_key("/", :summary_search_command)
 
     def initialize(buffer)
       super(buffer)
@@ -63,6 +66,26 @@ module Mournmail
     define_local_command(:search_result_close,
                          doc: "Close the search result.") do
       kill_buffer(@buffer)
+    end
+
+    define_local_command(:previous_page,
+                         doc: "Show the previous page.") do
+      messages = @buffer[:messages]
+      page = messages.current_page - 1
+      if page < 1
+        raise EditorError, "No more page."
+      end
+      summary_search(@buffer[:query], page)
+    end
+
+    define_local_command(:next_page,
+                         doc: "Show the next page.") do
+      messages = @buffer[:messages]
+      page = messages.current_page + 1
+      if page > messages.n_pages
+        raise EditorError, "No more page."
+      end
+      summary_search(@buffer[:query], page)
     end
 
     private
