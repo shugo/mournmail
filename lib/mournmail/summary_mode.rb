@@ -361,30 +361,13 @@ module Mournmail
       end
     end
     
-    define_local_command(:summary_search) do
+    define_local_command(:summary_search, doc: "Search mails.") do
       |query = read_from_minibuffer("Search mail: ",
                                     initial_value: @buffer[:query]),
         page = 1|
-      words = query.split
-      if words.empty?
-        raise EditorError, "No word given"
-      end
       Mournmail.background do
-        messages = Groonga["Messages"].select { |m|
-          words.inject(nil) { |e, word|
-            if e.nil?
-              m.subject =~ word 
-            else
-              e & (m.subject =~ word)
-            end
-          } | words.inject(nil) { |e, word|
-            if e.nil?
-              m.body =~ word 
-            else
-              e & (m.body =~ word)
-            end
-          }
-        }.paginate([["date", :desc]], page: page, size: 100)
+        messages = Groonga["Messages"].select(query, default_column: "body").
+          paginate([["date", :desc]], page: page, size: 100)
         next_tick do
           show_search_result(messages, query: query)
           message("Searched (#{messages.current_page}/#{messages.n_pages})")

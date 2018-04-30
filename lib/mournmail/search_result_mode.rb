@@ -107,7 +107,7 @@ module Mournmail
         }.sort([["date", :asc]])
         next_tick do
           show_search_result(messages, buffer_name: "*thread*")
-          i = messages.find_index { |m| m.path == message.path }
+          i = messages.find_index { |m| m._key == message._key }
           Buffer.current.goto_line(i + 1)
         end
       end
