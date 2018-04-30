@@ -252,6 +252,11 @@ module Mournmail
       table.short_text("list_id")
       table.text("body")
     end
+
+    Groonga::Schema.create_table("Ids", :type => :hash) do |table|
+      table.index("Messages.message_id")
+      table.index("Messages.thread_id")
+    end
     
     Groonga::Schema.create_table("Terms",
                                  type: :patricia_trie,
