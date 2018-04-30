@@ -37,6 +37,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
+    SUMMARY_MODE_MAP.define_key("/", :summary_search_command)
 
     define_syntax :seen, /^ *\d+[ *] .*/
     define_syntax :unseen, /^ *\d+[ *]u.*/
@@ -359,6 +360,49 @@ module Mournmail
         end
       end
     end
+    
+    define_local_command(:summary_search) do
+      |query = read_from_minibuffer("Search mail: ")|
+      words = query.split
+      if words.empty?
+        raise EditorError, "No word given"
+      end
+      Mournmail.background do
+        messages = Groonga["Messages"].select { |m|
+          words.inject(nil) { |e, word|
+            if e.nil?
+              m.subject =~ word 
+            else
+              e & (m.subject =~ word)
+            end
+          } | words.inject(nil) { |e, word|
+            if e.nil?
+              m.body =~ word 
+            else
+              e & (m.body =~ word)
+            end
+          }
+        }.sort([key: "date", order: "descending"]).take(100)
+        summary_text = messages.map { |m|
+          format("%s [ %s ] %s\n",
+                 m.date.strftime("%m/%d %H:%M"),
+                 ljust(m.from, 16),
+                 ljust(m.subject, 45))
+        }.join
+        next_tick do
+          buffer = Buffer.find_or_new("*search result*", undo_limit: 0,
+                                      read_only: true)
+          buffer.apply_mode(Mournmail::SearchResultMode)
+          buffer.read_only_edit do
+            buffer.clear
+            buffer.insert(summary_text)
+            buffer.beginning_of_buffer
+          end
+          buffer[:messages] = messages
+          switch_to_buffer(buffer)
+        end
+      end
+    end
 
     private
 
@@ -552,6 +596,22 @@ module Mournmail
                         list_id: header_text(list_id),
                         body: body_text(mail))
       end
+    end
+
+    def ljust(s, n)
+      width = 0
+      str = String.new
+      s.gsub(/\t/, " ").each_char do |c|
+        w = Buffer.display_width(c)
+        width += w
+        if width > n
+          width -= w
+          break
+        end
+        str.concat(c)
+        break if width == n
+      end
+      str + " " * (n - width)
     end
   end
 end
