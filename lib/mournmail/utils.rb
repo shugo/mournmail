@@ -175,8 +175,12 @@ module Mournmail
     File.expand_path("cache/#{host}/#{mailbox}", dir)
   end
 
+  def self.mail_cache_path(mailbox, uid)
+    File.join(mailbox_cache_path(mailbox), uid.to_s)
+  end
+
   def self.read_mail(mailbox, uid)
-    path = File.join(mailbox_cache_path(mailbox), uid.to_s)
+    path = mail_cache_path(mailbox, uid)
     begin
       File.open(path) do |f|
         f.flock(File::LOCK_SH)

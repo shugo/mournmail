@@ -29,6 +29,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("*s", :summary_mark_flagged_command)
     SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
     SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
+    SUMMARY_MODE_MAP.define_key("p", :summary_prefetch_command)
     SUMMARY_MODE_MAP.define_key("i", :summary_index_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
@@ -324,7 +325,7 @@ module Mournmail
               count += item_set.size
               progress = (count.to_f * 100 / uids.size).round
               next_tick do
-                message("Archiving mails... #{progress}%")
+                message("Archiving mails... #{progress}%", log: false)
               end
             end
           end
@@ -332,6 +333,47 @@ module Mournmail
         end
         next_tick do
           mournmail_summary_sync(source_mailbox, true)
+          message("Done")
+        end
+      end
+    end
+
+    define_local_command(:summary_prefetch,
+                         doc: "Prefetch mails.") do
+      summary = Mournmail.current_summary
+      mailbox = Mournmail.current_mailbox
+      FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
+      target_uids = @buffer.to_s.scan(/^ *\d+/).map { |s|
+        s.to_i
+      }.select { |uid|
+        path = Mournmail.mail_cache_path(mailbox, uid)
+        !File.exist?(path)
+      }
+      Mournmail.background do
+        Mournmail.imap_connect do |imap|
+          imap.select(mailbox)
+          count = 0
+          target_uids.each_slice(100) do |uids|
+            data = imap.uid_fetch(uids, "BODY[]")
+            data.each do |i|
+              uid = i.attr["UID"]
+              body = i.attr["BODY[]"]
+              path = Mournmail.mail_cache_path(mailbox, uid)
+              tmp_path = path + ".tmp"
+              File.open(path, "w", 0600) do |f|
+                f.flock(File::LOCK_EX)
+                File.write(tmp_path, body)
+                File.rename(tmp_path, path)
+              end
+            end
+            count += uids.size
+            progress = (count.to_f * 100 / target_uids.size).round
+              next_tick do
+                message("Prefetching mails... #{progress}%", log: false)
+              end
+          end
+        end
+        next_tick do
           message("Done")
         end
       end
@@ -348,10 +390,10 @@ module Mournmail
           mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
           index_mail(mailbox, uid, mail)
           new_progress = ((i + 1) * 100.0 / uids.length).floor
-          if new_progress == 100 || new_progress - progress >= 10
+          if new_progress == 100 || new_progress - progress > 0
             progress = new_progress
             next_tick do
-              message("Indexing mails... #{progress}%")
+              message("Indexing mails... #{progress}%", log: false)
             end
           end
         end
@@ -525,7 +567,7 @@ module Mournmail
         s = mail.body.decoded
         Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
       end
-    rescue Mail::UnknownEncodingType
+    rescue Mail::UnknownEncodingType, Encoding::InvalidByteSequenceError
       ""
     end
     
