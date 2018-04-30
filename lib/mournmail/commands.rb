@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 define_command(:mournmail, doc: "Start mournmail.") do
+  Mournmail.open_groonga_db
   mournmail_visit_mailbox("INBOX")
 end
 
@@ -63,6 +64,7 @@ define_command(:mournmail_quit, doc: "Quit mournmail.") do
   Mournmail.current_summary = nil
   Mournmail.current_mail = nil
   Mournmail.current_uid = nil
+  Mournmail.close_groonga_db
 end
 
 define_command(:mail, doc: "Write a new mail.") do
@@ -81,5 +83,63 @@ define_command(:mail, doc: "Write a new mail.") do
   end_of_line
   if run_hooks
     run_hooks(:mournmail_draft_setup_hook)
+  end
+end
+
+def ljust(s, n)
+  width = 0
+  str = String.new
+  s.gsub(/\t/, " ").each_char do |c|
+    w = Buffer.display_width(c)
+    width += w
+    if width > n
+      width -= w
+      break
+    end
+    str.concat(c)
+    break if width == n
+  end
+  str + " " * (n - width)
+end
+
+define_command(:mm_search) do
+  |query = read_from_minibuffer("Search mail: ")|
+  words = query.split
+  if words.empty?
+    raise EditorError, "No word given"
+  end
+  Mournmail.background do
+    messages = Groonga["Messages"].select { |m|
+      words.inject(nil) { |e, word|
+        if e.nil?
+          m.subject =~ word 
+        else
+          e & (m.subject =~ word)
+        end
+      } | words.inject(nil) { |e, word|
+        if e.nil?
+          m.body =~ word 
+        else
+          e & (m.body =~ word)
+        end
+      }
+    }.sort([key: "date", order: "ascending"]).take(100)
+    summary_text = messages.map { |m|
+      format("%s [ %s ] %s\n",
+             m.date.strftime("%m/%d %H:%M"),
+             ljust(m.from, 16),
+             ljust(m.subject, 45))
+    }.join
+    next_tick do
+      buffer = Buffer.find_or_new("*search result*", undo_limit: 0,
+                                  read_only: true)
+      buffer.apply_mode(Mournmail::SearchResultMode)
+      buffer.read_only_edit do
+        buffer.clear
+        buffer.insert(summary_text)
+      end
+      buffer[:messages] = messages
+      switch_to_buffer(buffer)
+    end
   end
 end

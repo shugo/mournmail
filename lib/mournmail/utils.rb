@@ -5,6 +5,7 @@ require "net/imap"
 require "time"
 require "fileutils"
 require "timeout"
+require "groonga"
 
 module Mournmail
   begin
@@ -205,5 +206,71 @@ module Mournmail
     }
     mailbox = read_from_minibuffer(prompt, completion_proc: f, **opts)
     Net::IMAP.encode_utf7(mailbox)
+  end
+
+  def self.force_utf8(s)
+    s.force_encoding(Encoding::UTF_8).scrub("?")
+  end
+
+  def self.to_utf8(s, charset)
+    if /\Autf-8\z/i =~ charset
+      force_utf8(s)
+    else
+      begin
+        s.encode(Encoding::UTF_8, charset, replace: "?")
+      rescue Encoding::ConverterNotFoundError
+        force_utf8(s)
+      end
+    end.gsub(/\r\n/, "\n")
+  end
+
+  @groonga_db = nil
+
+  def self.open_groonga_db
+    dir = CONFIG[:mournmail_directory]
+    db_path = File.expand_path("groonga/messages.db", dir)
+    if File.exist?(db_path)
+      @groonga_db = Groonga::Database.open(db_path)
+    else
+      @groonga_db = create_groonga_db(db_path)
+    end
+  end
+
+  def self.create_groonga_db(db_path)
+    FileUtils.mkdir_p(File.dirname(db_path), mode: 0700)
+    db = Groonga::Database.create(path: db_path)
+
+    Groonga::Schema.create_table("Messages", :type => :hash) do |table|
+      table.short_text("path")
+      table.short_text("message_id")
+      table.short_text("thread_id")
+      table.time("date")
+      table.short_text("subject")
+      table.short_text("from")
+      table.short_text("to")
+      table.short_text("cc")
+      table.short_text("list_id")
+      table.text("body")
+    end
+    
+    Groonga::Schema.create_table("Terms",
+                                 type: :patricia_trie,
+                                 normalizer: :NormalizerAuto,
+                                 default_tokenizer: "TokenBigram") do |table|
+      table.index("Messages.subject")
+      table.index("Messages.from")
+      table.index("Messages.to")
+      table.index("Messages.cc")
+      table.index("Messages.list_id")
+      table.index("Messages.body")
+    end
+
+    db
+  end
+
+  def self.close_groonga_db
+    if @groonga_db
+      @groonga_db.close
+    end
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tempfile"
+require "digest"
 
 using Mournmail::MessageRendering
 
@@ -28,6 +29,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("*s", :summary_mark_flagged_command)
     SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
     SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
+    SUMMARY_MODE_MAP.define_key("i", :summary_index_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
@@ -96,10 +98,8 @@ module Mournmail
     define_local_command(:summary_reply,
                          doc: "Reply to the current message.") do
       |reply_all = current_prefix_arg|
-      uid = selected_uid
       Mournmail.background do
-        mailbox = Mournmail.current_mailbox
-        mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
+        mail = Mail.new(read_current_mail[0])
         body = mail.render_body
         next_tick do
           Window.current = Mournmail.message_window
@@ -237,8 +237,7 @@ module Mournmail
                          doc: "View source of a mail.") do
       uid = selected_uid
       Mournmail.background do
-        mailbox = Mournmail.current_mailbox
-        source, = Mournmail.read_mail(mailbox, uid)
+        source, = read_current_mail
         next_tick do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
@@ -296,7 +295,7 @@ module Mournmail
 
     define_local_command(:summary_archive,
                          doc: "Archive marked mails.") do
-      uids = @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
+      uids = marked_uids
       summary = Mournmail.current_summary
       now = Time.now
       mailboxes = uids.map { |uid| summary[uid] }.group_by { |item|
@@ -334,6 +333,49 @@ module Mournmail
       end
     end
 
+    define_local_command(:summary_index,
+                         doc: "Index marked mails.") do
+      uids = marked_uids
+      summary = Mournmail.current_summary
+      mailbox = Mournmail.current_mailbox
+      Mournmail.background do
+        messages_db = Groonga["Messages"]
+        progress = 0
+        uids.each_with_index do |uid, i|
+          mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
+          id = mail.message_id.to_s + "_" +
+            Digest::SHA256.hexdigest(mail.header.to_s)
+          unless messages_db.has_key?(id)
+            thread_id = find_thread_id(mail, messages_db)
+            mail_path = File.join(Mournmail.mailbox_cache_path(mailbox),
+                                  uid.to_s)
+            list_id = (mail["List-Id"] || mail["X-ML-Name"])
+            messages_db.add(id,
+                            path: mail_path,
+                            message_id: header_text(mail.message_id),
+                            thread_id: header_text(thread_id),
+                            date: mail.date&.to_time,
+                            subject: header_text(mail.subject),
+                            from: header_text(mail["From"]),
+                            to: header_text(mail["To"]),
+                            cc: header_text(mail["Cc"]),
+                            list_id: header_text(list_id),
+                            body: body_text(mail))
+          end
+          new_progress = ((i + 1) * 100.0 / uids.length).floor
+          if new_progress == 100 || new_progress - progress >= 10
+            progress = new_progress
+            next_tick do
+              message("Indexing mails... #{progress}%")
+            end
+          end
+        end
+        next_tick do
+          message("Done")
+        end
+      end
+    end
+
     private
 
     def selected_uid
@@ -346,6 +388,16 @@ module Mournmail
         end
         @buffer.match_string(0).to_i
       }
+    end
+
+    def marked_uids
+      @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
+    end
+
+    def read_current_mail
+      mailbox = Mournmail.current_mailbox
+      uid = selected_uid
+      Mournmail.read_mail(mailbox, uid)
     end
 
     def scroll_up_or_next_uid
@@ -436,6 +488,62 @@ module Mournmail
       @buffer.read_only_edit do
         s = @buffer.to_s.gsub(re, s)
         @buffer.replace(s)
+      end
+    end
+
+    def find_thread_id(mail, messages_db)
+      references = Array(mail.references) | Array(mail.in_reply_to)
+      if references.empty?
+        mail.message_id
+      else
+        parent = messages_db.select { |m|
+          references.inject(nil) { |cond, ref|
+            if cond.nil?
+              m.message_id == ref
+            else
+              cond | (m.message_id == ref)
+            end
+          }
+        }.first
+        if parent
+          parent.thread_id
+        else
+          mail.message_id
+        end
+      end
+    end
+
+    def header_text(s)
+      s.to_s.scrub("?")
+    end
+    
+    def body_text(mail)
+      if mail.multipart?
+        mail.parts.map { |part|
+          part_text(part)
+        }.join("\n")
+      else
+        s = mail.body.decoded
+        Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
+      end
+    end
+    
+    def part_text(part)
+      if part.multipart?
+        part.parts.map { |part|
+          part_text(part)
+        }.join("\n")
+      elsif part.main_type == "message" && part.sub_type == "rfc822"
+        mail = Mail.new(part.body.raw_source)
+        body_text(mail)
+      elsif part.attachment?
+        ""
+      else
+        if part.main_type == "text" && part.sub_type == "plain"
+          part.decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+        else
+          ""
+        end
       end
     end
   end

@@ -33,15 +33,7 @@ module Mournmail
           }.join
         else
           s = body.decoded
-          if /\Autf-8\z/i =~ charset
-            force_utf8(s)
-          else
-            begin
-              s.encode(Encoding::UTF_8, charset, replace: "?")
-            rescue Encoding::ConverterNotFoundError
-              force_utf8(s)
-            end
-          end.gsub(/\r\n/, "\n")
+          Mournmail.to_utf8(s, charset).gsub(/\r\n/, "\n")
         end + pgp_signature
       end
 
@@ -59,10 +51,6 @@ module Mournmail
       end
 
       private
-
-      def force_utf8(s)
-        s.force_encoding(Encoding::UTF_8).scrub("?")
-      end
 
       def pgp_signature 
         if HAVE_MAIL_GPG && signed?
