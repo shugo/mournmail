@@ -525,6 +525,8 @@ module Mournmail
         s = mail.body.decoded
         Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
       end
+    rescue Mail::UnknownEncodingType
+      ""
     end
     
     def part_text(part)
