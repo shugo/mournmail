@@ -138,8 +138,8 @@ module Mournmail
       end
     end
 
-    def read_current_mail(num)
-      message = @buffer[:messages][@buffer.current_line - 1]
+    def read_current_mail
+      message = @buffer[:messages][@buffer.current_line]
       if message.nil?
         raise EditorError, "No message found"
       end
