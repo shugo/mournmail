@@ -123,7 +123,7 @@ define_command(:mm_search) do
           e & (m.body =~ word)
         end
       }
-    }.sort([key: "date", order: "ascending"]).take(100)
+    }.sort([key: "date", order: "descending"]).take(100)
     summary_text = messages.map { |m|
       format("%s [ %s ] %s\n",
              m.date.strftime("%m/%d %H:%M"),
@@ -137,6 +137,7 @@ define_command(:mm_search) do
       buffer.read_only_edit do
         buffer.clear
         buffer.insert(summary_text)
+        buffer.beginning_of_buffer
       end
       buffer[:messages] = messages
       switch_to_buffer(buffer)
