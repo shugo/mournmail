@@ -56,6 +56,9 @@ module Mournmail
         mailbox = Mournmail.current_mailbox
         s, fetched = Mournmail.read_mail(mailbox, uid)
         mail = Mail.new(s)
+        if fetched
+          index_mail(mailbox, uid, mail)
+        end
         next_tick do
           show_message(mail)
           mark_as_seen(uid, !fetched)
@@ -339,29 +342,10 @@ module Mournmail
       summary = Mournmail.current_summary
       mailbox = Mournmail.current_mailbox
       Mournmail.background do
-        messages_db = Groonga["Messages"]
         progress = 0
         uids.each_with_index do |uid, i|
           mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
-          id = mail.message_id.to_s + "_" +
-            Digest::SHA256.hexdigest(mail.header.to_s)
-          unless messages_db.has_key?(id)
-            thread_id = find_thread_id(mail, messages_db)
-            mail_path = File.join(Mournmail.mailbox_cache_path(mailbox),
-                                  uid.to_s)
-            list_id = (mail["List-Id"] || mail["X-ML-Name"])
-            messages_db.add(id,
-                            path: mail_path,
-                            message_id: header_text(mail.message_id),
-                            thread_id: header_text(thread_id),
-                            date: mail.date&.to_time,
-                            subject: header_text(mail.subject),
-                            from: header_text(mail["From"]),
-                            to: header_text(mail["To"]),
-                            cc: header_text(mail["Cc"]),
-                            list_id: header_text(list_id),
-                            body: body_text(mail))
-          end
+          index_mail(mailbox, uid, mail)
           new_progress = ((i + 1) * 100.0 / uids.length).floor
           if new_progress == 100 || new_progress - progress >= 10
             progress = new_progress
@@ -544,6 +528,29 @@ module Mournmail
         else
           ""
         end
+      end
+    end
+
+    def index_mail(mailbox, uid, mail)
+      messages_db = Groonga["Messages"]
+      id = mail.message_id.to_s + "_" +
+        Digest::SHA256.hexdigest(mail.header.to_s)
+      unless messages_db.has_key?(id)
+        thread_id = find_thread_id(mail, messages_db)
+        mail_path = File.join(Mournmail.mailbox_cache_path(mailbox),
+                              uid.to_s)
+        list_id = (mail["List-Id"] || mail["X-ML-Name"])
+        messages_db.add(id,
+                        path: mail_path,
+                        message_id: header_text(mail.message_id),
+                        thread_id: header_text(thread_id),
+                        date: mail.date&.to_time,
+                        subject: header_text(mail.subject),
+                        from: header_text(mail["From"]),
+                        to: header_text(mail["To"]),
+                        cc: header_text(mail["Cc"]),
+                        list_id: header_text(list_id),
+                        body: body_text(mail))
       end
     end
   end
