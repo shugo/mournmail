@@ -386,7 +386,7 @@ module Mournmail
           }
         }.paginate([["date", :desc]], page: page, size: 100)
         next_tick do
-          show_search_result(messages, query)
+          show_search_result(messages, query: query)
           message("Searched (#{messages.current_page}/#{messages.n_pages})")
         end
       end
@@ -586,14 +586,15 @@ module Mournmail
       end
     end
 
-    def show_search_result(messages, query)
+    def show_search_result(messages,
+                           query: nil, buffer_name: "*search result*")
       summary_text = messages.map { |m|
         format("%s [ %s ] %s\n",
                m.date.strftime("%m/%d %H:%M"),
                ljust(m.from, 16),
                ljust(m.subject, 45))
       }.join
-      buffer = Buffer.find_or_new("*search result*", undo_limit: 0,
+      buffer = Buffer.find_or_new(buffer_name, undo_limit: 0,
                                   read_only: true)
       buffer.apply_mode(Mournmail::SearchResultMode)
       buffer.read_only_edit do
