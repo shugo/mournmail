@@ -555,7 +555,7 @@ module Mournmail
     end
 
     def header_text(s)
-      s.to_s.scrub("?")
+      s.to_s.force_encoding(Encoding::UTF_8).scrub("?")
     end
     
     def body_text(mail)
