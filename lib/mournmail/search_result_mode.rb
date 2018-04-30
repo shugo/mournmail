@@ -66,7 +66,13 @@ module Mournmail
 
     define_local_command(:search_result_close,
                          doc: "Close the search result.") do
+      if @buffer.name == "*thread*"
+        buf = "*search result*"
+      else
+        buf = "*summary*"
+      end
       kill_buffer(@buffer)
+      switch_to_buffer(buf)
     end
 
     define_local_command(:previous_page,
@@ -101,6 +107,8 @@ module Mournmail
         }.sort([["date", :asc]])
         next_tick do
           show_search_result(messages, buffer_name: "*thread*")
+          i = messages.find_index { |m| m.path == message.path }
+          Buffer.current.goto_line(i + 1)
         end
       end
     end
