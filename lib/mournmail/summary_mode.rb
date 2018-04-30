@@ -618,8 +618,8 @@ module Mournmail
       summary_text = messages.map { |m|
         format("%s [ %s ] %s\n",
                m.date.strftime("%m/%d %H:%M"),
-               ljust(m.from, 16),
-               ljust(m.subject, 45))
+               ljust(m.from.to_s, 16),
+               ljust(m.subject.to_s, 45))
       }.join
       buffer = Buffer.find_or_new(buffer_name, undo_limit: 0,
                                   read_only: true)
