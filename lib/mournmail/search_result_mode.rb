@@ -67,7 +67,7 @@ module Mournmail
     define_local_command(:search_result_close,
                          doc: "Close the search result.") do
       if @buffer.name == "*thread*"
-        buf = "*search result*"
+        buf = Buffer["*search result*"] || "*summary*"
       else
         buf = "*summary*"
       end
