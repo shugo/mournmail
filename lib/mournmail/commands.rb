@@ -72,8 +72,9 @@ define_command(:mail, doc: "Write a new mail.") do
   buffer = Buffer.new_buffer("*draft*")
   switch_to_buffer(buffer)
   draft_mode
+  conf = Mournmail.account_config
   insert <<~EOF
-    From: #{CONFIG[:mournmail_from]}
+    From: #{conf[:from]}
     To: 
     Subject: 
     User-Agent: Mournmail/#{Mournmail::VERSION} Textbringer/#{Textbringer::VERSION} Ruby/#{RUBY_VERSION}

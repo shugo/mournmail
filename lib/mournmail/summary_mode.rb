@@ -41,6 +41,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
     SUMMARY_MODE_MAP.define_key("/", :summary_search_command)
     SUMMARY_MODE_MAP.define_key("t", :summary_show_thread_command)
+    SUMMARY_MODE_MAP.define_key("@", :summary_change_account_command)
 
     define_syntax :seen, /^ *\d+[ *] .*/
     define_syntax :unseen, /^ *\d+[ *]u.*/
@@ -441,6 +442,14 @@ module Mournmail
       end
     end
 
+    define_local_command(:summary_change_account,
+                         doc: "Change the current account.") do
+      |account = read_account_name("Change account: ")|
+      mournmail_quit
+      Mournmail.current_account = account
+      mournmail
+    end
+
     private
 
     def selected_uid
@@ -699,6 +708,13 @@ module Mournmail
         raise EditorError, "No message found"
       end
       message
+    end
+
+    def read_account_name(prompt, **opts)
+      f = ->(s) {
+        complete_for_minibuffer(s, CONFIG[:mournmail_accounts].keys)
+      }
+      read_from_minibuffer(prompt, completion_proc: f, **opts)
     end
   end
 end

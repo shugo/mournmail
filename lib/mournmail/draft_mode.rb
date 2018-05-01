@@ -67,8 +67,11 @@ module Mournmail
       attached_files.each do |file|
         m.add_file(file)
       end
-      m.delivery_method(@buffer[:mournmail_delivery_method],
-                        @buffer[:mournmail_delivery_options])
+      conf = Mournmail.account_config
+      m.delivery_method(@buffer[:mournmail_delivery_method] ||
+                        conf[:delivery_method],
+                        @buffer[:mournmail_delivery_options] ||
+                        conf[:delivery_options])
       bury_buffer(@buffer)
       background do
         begin

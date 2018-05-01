@@ -105,6 +105,32 @@ module Mournmail
   @imap = nil
   @imap_mutex = Mutex.new
   @mailboxes = []
+  @current_account = nil
+  @account_config = nil
+
+  def self.current_account
+    init_current_account
+    @current_account
+  end
+
+  def self.account_config
+    init_current_account
+    @account_config
+  end
+
+  def self.init_current_account
+    if @current_account.nil?
+      @current_account, @account_config = CONFIG[:mournmail_accounts].first
+    end
+  end
+
+  def self.current_account=(name)
+    unless CONFIG[:mournmail_accounts].key?(name)
+      raise ArgumentError, "No such account: #{name}"
+    end
+    @current_account = name
+    @account_config = CONFIG[:mournmail_accounts][name]
+  end
 
   def self.imap_connect
     @imap_mutex.synchronize do
@@ -112,13 +138,13 @@ module Mournmail
         start_keep_alive_thread
       end
       if @imap.nil? || @imap.disconnected?
+        conf = account_config
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
-          @imap = Net::IMAP.new(CONFIG[:mournmail_imap_host],
-                                CONFIG[:mournmail_imap_options])
-          @imap.authenticate(CONFIG[:mournmail_imap_options][:auth_type] ||
-                             "PLAIN",
-                             CONFIG[:mournmail_imap_options][:user_name],
-                             CONFIG[:mournmail_imap_options][:password])
+          @imap = Net::IMAP.new(conf[:imap_host],
+                                conf[:imap_options])
+          @imap.authenticate(conf[:imap_options][:auth_type] || "PLAIN",
+                             conf[:imap_options][:user_name],
+                             conf[:imap_options][:password])
           @mailboxes = @imap.list("", "*").map { |mbox|
             Net::IMAP.decode_utf7(mbox.name)
           }
@@ -170,9 +196,8 @@ module Mournmail
   end
 
   def self.mailbox_cache_path(mailbox)
-    dir = CONFIG[:mournmail_directory]
-    host = CONFIG[:mournmail_imap_host]
-    File.expand_path("cache/#{host}/#{mailbox}", dir)
+    File.expand_path("cache/#{current_account}/#{mailbox}",
+                     CONFIG[:mournmail_directory])
   end
 
   def self.mail_cache_path(mailbox, uid)
@@ -231,9 +256,8 @@ module Mournmail
   @groonga_db = nil
 
   def self.open_groonga_db
-    dir = CONFIG[:mournmail_directory]
-    host = CONFIG[:mournmail_imap_host]
-    db_path = File.expand_path("groonga/#{host}/messages.db", dir)
+    db_path = File.expand_path("groonga/#{current_account}/messages.db",
+                               CONFIG[:mournmail_directory])
     if File.exist?(db_path)
       @groonga_db = Groonga::Database.open(db_path)
     else
