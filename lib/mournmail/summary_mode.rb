@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tempfile"
+require "fileutils"
 require "digest"
 
 using Mournmail::MessageRendering
@@ -318,10 +319,14 @@ module Mournmail
             unless imap.list("", mailbox)
               imap.create(mailbox)
             end
-            items.each_slice(1000) do |item_set|
+            FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
+            items.each_slice(100) do |item_set|
               uid_set = item_set.map(&:uid)
               imap.uid_copy(uid_set, mailbox)
               imap.uid_store(uid_set, "+FLAGS", [:Deleted])
+              uid_set.each do |uid|
+                move_mail(source_mailbox, uid, mailbox)
+              end
               count += item_set.size
               progress = (count.to_f * 100 / uids.size).round
               next_tick do
@@ -648,6 +653,20 @@ module Mournmail
         break if width == n
       end
       str + " " * (n - width)
+    end
+
+    def move_mail(src_mailbox, uid, dst_mailbox)
+      src_path = Mournmail.mail_cache_path(src_mailbox, uid)
+      dst_path = Mournmail.mail_cache_path(dst_mailbox, uid)
+      begin
+        File.rename(src_path, dst_path)
+      rescue Errno::ENOENT
+      end
+      messages_db = Groonga["Messages"]
+      m = messages_db.select { |m| m.path == src_path }.first&.key
+      if m
+        m.path = dst_path
+      end
     end
   end
 end
