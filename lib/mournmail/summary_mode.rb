@@ -221,13 +221,27 @@ module Mournmail
         Expunge deleted messages.
       EOD
       buffer = Buffer.current
+      mailbox = Mournmail.current_mailbox
+      summary = Mournmail.current_summary
       Mournmail.background do
         Mournmail.imap_connect do |imap|
           imap.expunge
         end
-        summary = Mournmail.current_summary
         summary.delete_item_if do |item|
-          item.flags.include?(:Deleted)
+          if item.flags.include?(:Deleted)
+            path = Mournmail.mail_cache_path(mailbox, item.uid)
+            begin
+              File.unlink(path)
+            rescue Errno::ENOENT
+            end
+            m = Groonga["Messages"].select { |m| m.path == path }.first&.key
+            if m
+              m.delete
+            end
+            true
+          else
+            false
+          end
         end
         summary_text = summary.to_s
         summary.save
