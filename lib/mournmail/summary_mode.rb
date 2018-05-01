@@ -414,8 +414,11 @@ module Mournmail
                                     initial_value: @buffer[:query]),
         page = 1|
       Mournmail.background do
-        messages = Groonga["Messages"].select(query, default_column: "body").
-          paginate([["date", :desc]], page: page, size: 100)
+        messages = Groonga["Messages"].select { |record|
+          record.match(query) { |match_record|
+            match_record.subject | match_record.body
+          }
+        }.paginate([["date", :desc]], page: page, size: 100)
         next_tick do
           show_search_result(messages, query: query)
           message("Searched (#{messages.current_page}/#{messages.n_pages})")
