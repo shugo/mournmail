@@ -386,6 +386,7 @@ module Mournmail
                 File.write(tmp_path, body)
                 File.rename(tmp_path, path)
               end
+              index_mail(mailbox, uid, Mail.new(body))
             end
             count += uids.size
             progress = (count.to_f * 100 / target_uids.size).round
