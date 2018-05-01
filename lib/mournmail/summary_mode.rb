@@ -378,15 +378,10 @@ module Mournmail
             data = imap.uid_fetch(uids, "BODY[]")
             data.each do |i|
               uid = i.attr["UID"]
-              body = i.attr["BODY[]"]
+              s = i.attr["BODY[]"]
               path = Mournmail.mail_cache_path(mailbox, uid)
-              tmp_path = path + ".tmp"
-              File.open(path, "w", 0600) do |f|
-                f.flock(File::LOCK_EX)
-                File.write(tmp_path, body)
-                File.rename(tmp_path, path)
-              end
-              index_mail(mailbox, uid, Mail.new(body))
+              write_mail_cache(path, s)
+              index_mail(mailbox, uid, Mail.new(s))
             end
             count += uids.size
             progress = (count.to_f * 100 / target_uids.size).round

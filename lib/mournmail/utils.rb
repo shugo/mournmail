@@ -204,6 +204,15 @@ module Mournmail
     File.join(mailbox_cache_path(mailbox), uid.to_s)
   end
 
+  def self.write_mail_cache(path, s)
+    tmp_path = path + ".tmp"
+    File.open(path, "w", 0600) do |f|
+      f.flock(File::LOCK_EX)
+      File.write(tmp_path, s, perm: 0600)
+      File.rename(tmp_path, path)
+    end
+  end
+
   def self.read_mail(mailbox, uid)
     path = mail_cache_path(mailbox, uid)
     begin
@@ -220,10 +229,7 @@ module Mournmail
         end
         s = data[0].attr["BODY[]"]
         FileUtils.mkdir_p(File.dirname(path))
-        File.open(path, "w", 0600) do |f|
-          f.flock(File::LOCK_EX)
-          f.write(s)
-        end
+        write_mail_cache(path, s)
         [s, true]
       end
     end
