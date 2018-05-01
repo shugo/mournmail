@@ -34,10 +34,10 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
       message("Syncing #{mailbox} in background... Done")
       begin
         buffer.beginning_of_buffer
-        buffer.re_search_forward(/^\d+ u/)
+        buffer.re_search_forward(/^ *\d+ u/)
       rescue SearchError
         buffer.end_of_buffer
-        buffer.re_search_backward(/^\d+ /, raise_error: false)
+        buffer.re_search_backward(/^ *\d+ /, raise_error: false)
       end
       summary_read_command
     end
