@@ -129,8 +129,14 @@ module Mournmail
             insert("Re: ")
           end
           insert(subject)
-          if mail['message-id']
-            insert("\nIn-Reply-To: #{mail['message-id']}")
+          references = mail.references || Array(mail.in_reply_to)
+          if mail.message_id
+            insert("\nIn-Reply-To: <#{mail.message_id}>")
+            references.push(mail.message_id)
+          end
+          if !references.empty?
+            refs = references.map { |id| "<#{id}>" }.join(" ")
+            insert("\nReferences: " + refs)
           end
           end_of_buffer
           push_mark
