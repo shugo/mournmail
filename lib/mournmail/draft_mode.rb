@@ -93,6 +93,9 @@ module Mournmail
           outbox = CONFIG[:mournmail_outbox]
           if outbox
             Mournmail.imap_connect do |imap|
+              unless imap.list("", outbox)
+                imap.create(outbox)
+              end
               imap.append(outbox, m.to_s, [:Seen])
             end
           end
