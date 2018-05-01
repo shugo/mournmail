@@ -386,7 +386,7 @@ module Mournmail
               uid = i.attr["UID"]
               s = i.attr["BODY[]"]
               path = Mournmail.mail_cache_path(mailbox, uid)
-              write_mail_cache(path, s)
+              Mournmail.write_mail_cache(path, s)
               index_mail(mailbox, uid, Mail.new(s))
             end
             count += uids.size
