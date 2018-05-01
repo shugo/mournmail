@@ -232,7 +232,8 @@ module Mournmail
 
   def self.open_groonga_db
     dir = CONFIG[:mournmail_directory]
-    db_path = File.expand_path("groonga/messages.db", dir)
+    host = CONFIG[:mournmail_imap_host]
+    db_path = File.expand_path("groonga/#{host}/messages.db", dir)
     if File.exist?(db_path)
       @groonga_db = Groonga::Database.open(db_path)
     else
