@@ -40,6 +40,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("j", :next_line)
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
     SUMMARY_MODE_MAP.define_key("/", :summary_search_command)
+    SUMMARY_MODE_MAP.define_key("t", :summary_show_thread_command)
 
     define_syntax :seen, /^ *\d+[ *] .*/
     define_syntax :unseen, /^ *\d+[ *]u.*/
@@ -422,6 +423,21 @@ module Mournmail
       end
     end
 
+    define_local_command(:summary_show_thread,
+                         doc: "Show the thread of the current mail.") do
+      Mournmail.background do
+        message = current_message
+        messages = Groonga["Messages"].select { |m|
+          m.thread_id == message.thread_id
+        }.sort([["date", :asc]])
+        next_tick do
+          show_search_result(messages, buffer_name: "*thread*")
+          i = messages.find_index { |m| m._key == message._key }
+          Buffer.current.goto_line(i + 1)
+        end
+      end
+    end
+
     private
 
     def selected_uid
@@ -667,6 +683,19 @@ module Mournmail
       if m
         m.path = dst_path
       end
+    end
+
+    def current_message
+      uid = selected_uid
+      mailbox = Mournmail.current_mailbox
+      path = Mournmail.mail_cache_path(mailbox, uid)
+      message = Groonga["Messages"].select { |m|
+        m.path == path
+      }.first&.key
+      if message.nil?
+        raise EditorError, "No message found"
+      end
+      message
     end
   end
 end

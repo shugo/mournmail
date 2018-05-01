@@ -23,7 +23,7 @@ module Mournmail
     SEARCH_RESULT_MODE_MAP.define_key("<", :previous_page_command)
     SEARCH_RESULT_MODE_MAP.define_key(">", :next_page_command)
     SEARCH_RESULT_MODE_MAP.define_key("/", :summary_search_command)
-    SEARCH_RESULT_MODE_MAP.define_key("t", :show_thread_command)
+    SEARCH_RESULT_MODE_MAP.define_key("t", :summary_show_thread_command)
 
     def initialize(buffer)
       super(buffer)
@@ -95,24 +95,6 @@ module Mournmail
       summary_search(@buffer[:query], page)
     end
 
-    define_local_command(:show_thread,
-                         doc: "Show the thread of the current mail.") do
-      message = @buffer[:messages][@buffer.current_line]
-      if message.nil?
-        raise EditorError, "No message found"
-      end
-      Mournmail.background do
-        messages = Groonga["Messages"].select { |m|
-          m.thread_id == message.thread_id
-        }.sort([["date", :asc]])
-        next_tick do
-          show_search_result(messages, buffer_name: "*thread*")
-          i = messages.find_index { |m| m._key == message._key }
-          Buffer.current.goto_line(i + 1)
-        end
-      end
-    end
-
     private
 
     def scroll_up_or_current_number
@@ -152,6 +134,14 @@ module Mournmail
         raise EditorError, "No more mail"
       end
       @buffer.forward_line
+    end
+
+    def current_message
+      message = @buffer[:messages][@buffer.current_line]
+      if message.nil?
+        raise EditorError, "No message found"
+      end
+      message
     end
   end
 end
