@@ -641,6 +641,9 @@ module Mournmail
     end
 
     def index_mail(mailbox, uid, mail)
+      if mailbox == CONFIG[:mournmail_spam_mailbox]
+        return
+      end
       messages_db = Groonga["Messages"]
       id = mail.message_id.to_s + "_" +
         Digest::SHA256.hexdigest(mail.header.to_s)
