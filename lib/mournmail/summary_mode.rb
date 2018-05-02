@@ -30,6 +30,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("*s", :summary_mark_flagged_command)
     SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
     SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
+    SUMMARY_MODE_MAP.define_key("o", :summary_refile_command)
     SUMMARY_MODE_MAP.define_key("p", :summary_prefetch_command)
     SUMMARY_MODE_MAP.define_key("i", :summary_index_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
@@ -355,6 +356,47 @@ module Mournmail
               next_tick do
                 message("Archiving mails... #{progress}%", log: false)
               end
+            end
+          end
+          imap.expunge
+        end
+        next_tick do
+          mournmail_summary_sync(source_mailbox, true)
+          message("Done")
+        end
+      end
+    end
+
+    define_local_command(:summary_refile,
+                         doc: "Archive marked mails.") do
+      |mailbox = Mournmail.read_mailbox_name("Refile mails: ")|
+      uids = marked_uids
+      summary = Mournmail.current_summary
+      source_mailbox = Mournmail.current_mailbox
+      if source_mailbox == mailbox
+        raise EditorError, "Can't refile to the same mailbox"
+      end
+      Mournmail.background do
+        Mournmail.imap_connect do |imap|
+          count = 0
+          unless imap.list("", mailbox)
+            if next_tick! { yes_or_no?("#{mailbox} doesn't exist; Create?") }
+              imap.create(mailbox)
+            else
+              next
+            end
+          end
+          FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
+          uids.each_slice(100) do |uid_set|
+            imap.uid_copy(uid_set, mailbox)
+            imap.uid_store(uid_set, "+FLAGS", [:Deleted])
+            uid_set.each do |uid|
+              move_mail(source_mailbox, uid, mailbox)
+            end
+            count += uid_set.size
+            progress = (count.to_f * 100 / uids.size).round
+            next_tick do
+              message("Refiling mails... #{progress}%", log: false)
             end
           end
           imap.expunge
