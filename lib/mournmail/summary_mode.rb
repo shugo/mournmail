@@ -407,14 +407,18 @@ module Mournmail
         Mournmail.imap_connect do |imap|
           imap.select(mailbox)
           count = 0
-          target_uids.each_slice(100) do |uids|
+          target_uids.each_slice(10) do |uids|
             data = imap.uid_fetch(uids, "BODY[]")
             data.each do |i|
               uid = i.attr["UID"]
               s = i.attr["BODY[]"]
               path = Mournmail.mail_cache_path(mailbox, uid)
-              Mournmail.write_mail_cache(path, s)
-              index_mail(mailbox, uid, Mail.new(s))
+              if s.size == 0
+                message("Message is empty: UID=#{uid}")
+              else
+                Mournmail.write_mail_cache(path, s)
+                index_mail(mailbox, uid, Mail.new(s))
+              end
             end
             count += uids.size
             progress = (count.to_f * 100 / target_uids.size).round
