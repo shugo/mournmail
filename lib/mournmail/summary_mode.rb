@@ -129,7 +129,8 @@ module Mournmail
             insert("Re: ")
           end
           insert(subject)
-          references = mail.references || Array(mail.in_reply_to)
+          references = mail.references ?
+            Array(mail.references) : Array(mail.in_reply_to)
           if mail.message_id
             insert("\nIn-Reply-To: <#{mail.message_id}>")
             references.push(mail.message_id)
