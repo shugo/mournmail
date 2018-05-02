@@ -325,15 +325,24 @@ module Mournmail
 
     define_local_command(:summary_archive,
                          doc: "Archive marked mails.") do
+      archive_mailbox_format =
+        Mournmail.account_config[:archive_mailbox_format]
+      if archive_mailbox_format.nil?
+        raise EditorError, "No archive_mailbox_format in the current account"
+      end
       uids = marked_uids
       summary = Mournmail.current_summary
       now = Time.now
-      mailboxes = uids.map { |uid| summary[uid] }.group_by { |item|
-        t = Time.parse(item.date) rescue now
-        t.strftime(CONFIG[:mournmail_archive_mailbox_format])
-      }.transform_values { |items|
-        items.map(&:uid)
-      }
+      if archive_mailbox_format == false
+        mailboxes = { nil => uids }
+      else
+        mailboxes = uids.map { |uid| summary[uid] }.group_by { |item|
+          t = Time.parse(item.date) rescue now
+          t.strftime(archive_mailbox_format)
+        }.transform_values { |items|
+          items.map(&:uid)
+        }
+      end
       source_mailbox = Mournmail.current_mailbox
       if mailboxes.key?(source_mailbox)
         raise EditorError, "Can't archive mails in archive mailboxes"
@@ -341,7 +350,7 @@ module Mournmail
       Mournmail.background do
         Mournmail.imap_connect do |imap|
           mailboxes.each do |mailbox, item_uids|
-            unless imap.list("", mailbox)
+            if mailbox && !imap.list("", mailbox)
               imap.create(mailbox)
             end
             refile_mails(imap, source_mailbox, item_uids, mailbox)
@@ -721,23 +730,35 @@ module Mournmail
     end
 
     def refile_mails(imap, src_mailbox, uids, dst_mailbox)
-      FileUtils.mkdir_p(Mournmail.mailbox_cache_path(dst_mailbox))
+      if dst_mailbox
+        FileUtils.mkdir_p(Mournmail.mailbox_cache_path(dst_mailbox))
+      end
       count = 0
       uids.each_slice(100) do |uid_set|
-        imap.uid_copy(uid_set, dst_mailbox)
-        imap.uid_store(uid_set, "+FLAGS", [:Deleted])
-        uid_set.each do |uid|
-          move_mail(src_mailbox, uid, dst_mailbox)
+        if dst_mailbox
+          imap.uid_copy(uid_set, dst_mailbox) 
+          uid_set.each do |uid|
+            move_mail(src_mailbox, uid, dst_mailbox)
+          end
         end
+        imap.uid_store(uid_set, "+FLAGS", [:Deleted])
         count += uid_set.size
         progress = (count.to_f * 100 / uids.size).round
         next_tick do
-          message("Refiling mails to #{dst_mailbox}... #{progress}%",
-                  log: false)
+          if dst_mailbox
+            message("Refiling mails to #{dst_mailbox}... #{progress}%",
+                    log: false)
+          else
+            message("Deleting mails... #{progress}%", log: false)
+          end 
         end
       end
       next_tick do
-        message("Refiled mails to #{dst_mailbox}")
+        if dst_mailbox
+          message("Refiled mails to #{dst_mailbox}")
+        else
+          message("Deleted mails")
+        end
       end
     end
 
