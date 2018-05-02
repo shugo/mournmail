@@ -17,7 +17,7 @@ module Mournmail
     SEARCH_RESULT_MODE_MAP.define_key("A", :summary_reply_command)
 #    SEARCH_RESULT_MODE_MAP.define_key("f", :summary_forward_command)
     SEARCH_RESULT_MODE_MAP.define_key("v", :summary_view_source_command)
-    SEARCH_RESULT_MODE_MAP.define_key("u", :search_result_close_command)
+    SEARCH_RESULT_MODE_MAP.define_key("q", :search_result_close_command)
     SEARCH_RESULT_MODE_MAP.define_key("k", :previous_line)
     SEARCH_RESULT_MODE_MAP.define_key("j", :next_line)
     SEARCH_RESULT_MODE_MAP.define_key("<", :previous_page_command)
