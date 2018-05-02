@@ -331,6 +331,8 @@ module Mournmail
       mailboxes = uids.map { |uid| summary[uid] }.group_by { |item|
         t = Time.parse(item.date) rescue now
         t.strftime(CONFIG[:mournmail_archive_mailbox_format])
+      }.transform_values { |items|
+        items.map(&:uid)
       }
       source_mailbox = Mournmail.current_mailbox
       if mailboxes.key?(source_mailbox)
@@ -338,25 +340,11 @@ module Mournmail
       end
       Mournmail.background do
         Mournmail.imap_connect do |imap|
-          count = 0
-          mailboxes.each do |mailbox, items|
+          mailboxes.each do |mailbox, item_uids|
             unless imap.list("", mailbox)
               imap.create(mailbox)
             end
-            FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
-            items.each_slice(100) do |item_set|
-              uid_set = item_set.map(&:uid)
-              imap.uid_copy(uid_set, mailbox)
-              imap.uid_store(uid_set, "+FLAGS", [:Deleted])
-              uid_set.each do |uid|
-                move_mail(source_mailbox, uid, mailbox)
-              end
-              count += item_set.size
-              progress = (count.to_f * 100 / uids.size).round
-              next_tick do
-                message("Archiving mails... #{progress}%", log: false)
-              end
-            end
+            refile_mails(imap, source_mailbox, item_uids, mailbox)
           end
           imap.expunge
         end
@@ -378,7 +366,6 @@ module Mournmail
       end
       Mournmail.background do
         Mournmail.imap_connect do |imap|
-          count = 0
           unless imap.list("", mailbox)
             if next_tick! { yes_or_no?("#{mailbox} doesn't exist; Create?") }
               imap.create(mailbox)
@@ -386,19 +373,7 @@ module Mournmail
               next
             end
           end
-          FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
-          uids.each_slice(100) do |uid_set|
-            imap.uid_copy(uid_set, mailbox)
-            imap.uid_store(uid_set, "+FLAGS", [:Deleted])
-            uid_set.each do |uid|
-              move_mail(source_mailbox, uid, mailbox)
-            end
-            count += uid_set.size
-            progress = (count.to_f * 100 / uids.size).round
-            next_tick do
-              message("Refiling mails... #{progress}%", log: false)
-            end
-          end
+          refile_mails(imap, source_mailbox, uids, mailbox)
           imap.expunge
         end
         next_tick do
@@ -743,6 +718,27 @@ module Mournmail
         break if width == n
       end
       str + " " * (n - width)
+    end
+
+    def refile_mails(imap, src_mailbox, uids, dst_mailbox)
+      FileUtils.mkdir_p(Mournmail.mailbox_cache_path(dst_mailbox))
+      count = 0
+      uids.each_slice(100) do |uid_set|
+        imap.uid_copy(uid_set, dst_mailbox)
+        imap.uid_store(uid_set, "+FLAGS", [:Deleted])
+        uid_set.each do |uid|
+          move_mail(src_mailbox, uid, dst_mailbox)
+        end
+        count += uid_set.size
+        progress = (count.to_f * 100 / uids.size).round
+        next_tick do
+          message("Refiling mails to #{dst_mailbox}... #{progress}%",
+                  log: false)
+        end
+      end
+      next_tick do
+        message("Refiled mails to #{dst_mailbox}")
+      end
     end
 
     def move_mail(src_mailbox, uid, dst_mailbox)
