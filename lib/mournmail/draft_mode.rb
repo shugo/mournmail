@@ -92,7 +92,7 @@ module Mournmail
           next_tick do
             message("Mail sent.")
           end
-          outbox = CONFIG[:mournmail_outbox]
+          outbox = Mournmail.account_config[:outbox_mailbox]
           if outbox
             Mournmail.imap_connect do |imap|
               unless imap.list("", outbox)
