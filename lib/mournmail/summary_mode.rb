@@ -150,17 +150,12 @@ module Mournmail
 
     define_local_command(:summary_forward,
                          doc: "Forward the current message.") do
-      uid = selected_uid
-      summary = Mournmail.current_summary
-      item = summary[uid]
-      if item.cache_id.nil?
-        raise EditorError, "Message is not fetched yet"
-      end
+      message = current_message
       Window.current = Mournmail.message_window
       Commands.mail
       re_search_forward(/^Subject: /)
-      insert("Forward: " + Mournmail.decode_eword(item.subject))
-      insert("\nAttached-Message: #{item.cache_id}")
+      insert("Forward: " + message.subject)
+      insert("\nAttached-Message: #{message._key}")
       re_search_backward(/^To: /)
       end_of_line
     end
@@ -650,11 +645,8 @@ module Mournmail
 
     def current_message
       uid = selected_uid
-      mailbox = Mournmail.current_mailbox
-      path = Mournmail.mail_cache_path(mailbox, uid)
-      message = Groonga["Messages"].select { |m|
-        m.path == path
-      }.first&.key
+      item = Mournmail.current_summary[uid]
+      message = Groonga["Messages"][item.cache_id]
       if message.nil?
         raise EditorError, "No message found"
       end
