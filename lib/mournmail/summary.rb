@@ -7,6 +7,7 @@ require "monitor"
 module Mournmail
   class Summary
     attr_reader :items, :last_uid
+    attr_accessor :uidvalidity
 
     include MonitorMixin
 
@@ -54,6 +55,7 @@ module Mournmail
       @message_id_table = {}
       @uid_table = {}
       @last_uid = nil
+      @uidvalidity = nil
     end
 
     DUMPABLE_VARIABLES = [
@@ -61,7 +63,8 @@ module Mournmail
       :@items,
       :@message_id_table,
       :@uid_table,
-      :@last_uid
+      :@last_uid,
+      :@uidvalidity
     ]
 
     def marshal_dump
