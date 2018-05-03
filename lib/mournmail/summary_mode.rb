@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "tempfile"
-require "fileutils"
-
 using Mournmail::MessageRendering
 
 module Mournmail

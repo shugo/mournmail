@@ -3,6 +3,7 @@
 require "mail"
 require "net/imap"
 require "time"
+require "tempfile"
 require "fileutils"
 require "timeout"
 require "digest"
