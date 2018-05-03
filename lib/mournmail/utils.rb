@@ -180,13 +180,13 @@ module Mournmail
   end
 
   def self.fetch_summary(mailbox, all: false)
+    if all
+      summary = Mournmail::Summary.new(mailbox)
+    else
+      summary = Mournmail::Summary.load_or_new(mailbox)
+    end
     imap_connect do |imap|
       imap.select(mailbox)
-      if all
-        summary = Mournmail::Summary.new(mailbox)
-      else
-        summary = Mournmail::Summary.load_or_new(mailbox)
-      end
       uidvalidity = imap.responses["UIDVALIDITY"].last
       if summary.uidvalidity.nil?
         summary.uidvalidity = uidvalidity
@@ -213,6 +213,11 @@ module Mournmail
       end
       summary
     end
+  rescue SocketError, Timeout::Error => e
+    next_tick do
+      message(e.message)
+    end
+    summary
   end
 
   def self.mailbox_cache_path(mailbox)
