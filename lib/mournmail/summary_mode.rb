@@ -398,25 +398,29 @@ module Mournmail
         Mournmail.imap_connect do |imap|
           imap.select(mailbox)
           count = 0
-          target_uids.each_slice(20) do |uids|
-            data = imap.uid_fetch(uids, "BODY[]")
-            data.each do |i|
-              uid = i.attr["UID"]
-              s = i.attr["BODY[]"]
-              if s
-                summary[uid].cache_id = Mournmail.write_mail_cache(s)
-                if mailbox != Mournmail.account_config[:spam_mailbox]
-                  Mournmail.index_mail(summary[uid].cache_id, Mail.new(s))
+          begin
+            target_uids.each_slice(20) do |uids|
+              data = imap.uid_fetch(uids, "BODY[]")
+              data.each do |i|
+                uid = i.attr["UID"]
+                s = i.attr["BODY[]"]
+                if s
+                  cache_id = Mournmail.write_mail_cache(s)
+                  if mailbox != Mournmail.account_config[:spam_mailbox]
+                    Mournmail.index_mail(cache_id, Mail.new(s))
+                  end
+                  summary[uid].cache_id = cache_id
                 end
               end
+              count += uids.size
+              progress = (count.to_f * 100 / target_uids.size).round
+              next_tick do
+                message("Prefetching mails... #{progress}%", log: false)
+              end
             end
-            count += uids.size
-            progress = (count.to_f * 100 / target_uids.size).round
-            next_tick do
-              message("Prefetching mails... #{progress}%", log: false)
-            end
+          ensure
+            summary.save
           end
-          summary.save
         end
         next_tick do
           message("Done")
