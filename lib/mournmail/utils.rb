@@ -277,7 +277,7 @@ module Mournmail
     end
 
     def header_text(s)
-      s.to_s.force_encoding(Encoding::UTF_8).scrub("?")
+      force_utf8(s.to_s)
     end
     
     def body_text(mail)
@@ -287,7 +287,7 @@ module Mournmail
         }.join("\n")
       else
         s = mail.body.decoded
-        Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
+        to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
       end
     rescue
       ""
@@ -305,7 +305,7 @@ module Mournmail
         ""
       else
         if part.main_type == "text" && part.sub_type == "plain"
-          part.decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+          force_utf8(part.decoded).sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
         else
           ""
         end
