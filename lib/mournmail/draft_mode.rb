@@ -65,7 +65,9 @@ module Mournmail
         end
       end
       attached_files.each do |file|
-        m.add_file(file)
+        m.add_file(filename: File.basename(file),
+                   content: File.read(file),
+                   encoding: "binary")
       end
       conf = Mournmail.account_config
       m.delivery_method(@buffer[:mournmail_delivery_method] ||
