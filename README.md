@@ -10,32 +10,53 @@ Mournmail is a message user agent for
 ## Configuration
 
 ```ruby
-# The default value of From:
-CONFIG[:mournmail_from] = "Shugo Maeda <shugo@example.com>"
-# The delivery method for Mail#delivery_method
-CONFIG[:mournmail_delivery_method] = :smtp
-# The options for Mail#delivery_method
-CONFIG[:mournmail_delivery_options] = {
-  :address => "smtp.example.com",
-  :port => 465,
-  :domain => Socket.gethostname,
-  :user_name => "shugo",
-  :password => File.read("/path/to/smtp_passwd").chomp,
-  :authentication => "login",
-  :tls => true,
-  :ca_file => "/path/to/cacert.pem"
-}
-# The host for Net::IMAP#new
-CONFIG[:mournmail_imap_host] = "imap.example.com"
-# The options for Net::IMAP.new and
-# Net::IMAP#authenticate (auth_type, user_name, and password)
-CONFIG[:mournmail_imap_options] = {
-  ssl: {
-    :ca_file => File.expand_path("/path/to/cacert.pem")
+CONFIG[:mournmail_accounts] = {
+  "example.com" => {
+    from: "Shugo Maeda <shugo@example.com>",
+    delivery_method: :smtp,
+    delivery_options: {
+      address: "smtp.example.com",
+      port: 465,
+      domain: Socket.gethostname,
+      user_name: "shugo",
+      password: File.read("/path/to/smtp_passwd").chomp,
+      authentication: "login",
+      tls: true,
+      ca_file: "/path/to/ca.pem"
+    },
+    imap_host: "imap.example.com",
+    imap_options: {
+      auth_type: "PLAIN",
+      user_name: "shugo",
+      password: File.read("/path/to/imap_passwd").chomp,
+      ssl: { ca_file: "/path/to/ca.pem" }
+    },
+    spam_mailbox: "spam",
+    outbox_mailbox: "outbox",
+    archive_mailbox_format: "archive/%Y"
   },
-  auth_type: "PLAIN",
-  user_name: "shugo",
-  password: File.read("/path/to/imap_passwd").chomp
+  "gmail.com" => {
+    from: "Example <example@gmail.com>",
+    delivery_method: :smtp,
+    delivery_options: {
+      address: "smtp.gmail.com",
+      port: 587,
+      domain: Socket.gethostname,
+      user_name: "example@gmail.com",
+      password: File.read("/path/to/gmail_passwd").chomp,
+      authentication: "login",
+      enable_starttls_auto: true
+    },
+    imap_host: "imap.gmail.com",
+    imap_options: {
+      auth_type: "PLAIN",
+      user_name: "example@gmail.com",
+      password: File.read(File.expand_path("~/.textbringer/gmail_passwd")).chomp,
+      ssl: true
+    },
+    spam_mailbox: "迷惑メール",
+    archive_mailbox_format: false
+  },
 }
 ```
 
