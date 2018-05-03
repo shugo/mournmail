@@ -38,7 +38,7 @@ module Mournmail
         if message.nil?
           raise EditorError, "No message found"
         end
-        mail = Mail.new(File.read(message.path))
+        mail = Mail.new(Mournmail.read_mail_cache(message._key))
         next_tick do
           show_message(mail)
           @buffer[:message_number] = num
@@ -125,7 +125,7 @@ module Mournmail
       if message.nil?
         raise EditorError, "No message found"
       end
-      [File.read(message.path), false]
+      [Mail.new(Mournmail.read_mail_cache(message._key)), false]
     end
 
     def next_message

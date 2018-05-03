@@ -112,6 +112,32 @@ module Mournmail
       end
     end
 
+    def read_mail(uid)
+      synchronize do
+        item = @uid_table[uid]
+        if item.cache_id
+          File.open(Mournmail.mail_cache_path(item.cache_id)) do |f|
+            [Mail.new(f.read), false]
+          end
+        else
+          Mournmail.imap_connect do |imap|
+            imap.select(@mailbox)
+            data = imap.uid_fetch(uid, "BODY[]")
+            if data.empty?
+              raise EditorError, "No such mail: #{uid}"
+            end
+            s = data[0].attr["BODY[]"]
+            mail = Mail.new(s)
+            if @mailbox != Mournmail.account_config[:spam_mailbox]
+              item.cache_id = Mournmail.write_mail_cache(s)
+              Mournmail.index_mail(item.cache_id, mail)
+            end
+            [mail, true]
+          end
+        end
+      end
+    end
+
     def save
       synchronize do
         path = Summary.cache_path(@mailbox)
@@ -139,6 +165,7 @@ module Mournmail
   class SummaryItem
     attr_reader :uid, :date, :from, :subject, :flags
     attr_reader :replies
+    attr_accessor :cache_id
     
     def initialize(uid, date, from, subject, flags)
       @uid = uid
@@ -148,6 +175,7 @@ module Mournmail
       @flags = flags
       @line = nil
       @replies = []
+      @cache_id = nil
     end
     
     def add_reply(reply)

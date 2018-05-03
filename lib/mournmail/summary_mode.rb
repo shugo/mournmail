@@ -2,7 +2,6 @@
 
 require "tempfile"
 require "fileutils"
-require "digest"
 
 using Mournmail::MessageRendering
 
@@ -32,7 +31,6 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
     SUMMARY_MODE_MAP.define_key("o", :summary_refile_command)
     SUMMARY_MODE_MAP.define_key("p", :summary_prefetch_command)
-    SUMMARY_MODE_MAP.define_key("i", :summary_index_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
     SUMMARY_MODE_MAP.define_key("M", :summary_merge_partial_command)
@@ -58,13 +56,9 @@ module Mournmail
     define_local_command(:summary_read, doc: "Read a mail.") do
       uid = scroll_up_or_next_uid
       return if uid.nil?
+      summary = Mournmail.current_summary
       Mournmail.background do
-        mailbox = Mournmail.current_mailbox
-        s, fetched = Mournmail.read_mail(mailbox, uid)
-        mail = Mail.new(s)
-        if fetched
-          index_mail(mailbox, uid, mail)
-        end
+        mail, fetched = summary.read_mail(uid)
         next_tick do
           show_message(mail)
           mark_as_seen(uid, !fetched)
@@ -108,7 +102,7 @@ module Mournmail
                          doc: "Reply to the current message.") do
       |reply_all = current_prefix_arg|
       Mournmail.background do
-        mail = Mail.new(read_current_mail[0])
+        mail = read_current_mail[0]
         body = mail.render_body
         next_tick do
           Window.current = Mournmail.message_window
@@ -159,11 +153,14 @@ module Mournmail
       uid = selected_uid
       summary = Mournmail.current_summary
       item = summary[uid]
+      if item.cache_id.nil?
+        raise EditorError, "Message is not fetched yet"
+      end
       Window.current = Mournmail.message_window
       Commands.mail
       re_search_forward(/^Subject: /)
       insert("Forward: " + Mournmail.decode_eword(item.subject))
-      insert("\nAttached-Message: #{Mournmail.current_mailbox}/#{uid}")
+      insert("\nAttached-Message: #{item.cache_id}")
       re_search_backward(/^To: /)
       end_of_line
     end
@@ -237,16 +234,17 @@ module Mournmail
         end
         summary.delete_item_if do |item|
           if item.flags.include?(:Deleted)
-            path = Mournmail.mail_cache_path(mailbox, item.uid)
-            begin
-              File.unlink(path)
-            rescue Errno::ENOENT
+            if item.cache_id
+              begin
+                File.unlink(Mournmail.mail_cache_path(item.cache_id))
+              rescue Errno::ENOENT
+              end
+              begin
+                Groonga["Messages"].delete(item.cache_id)
+              rescue Groonga::InvalidArgument
+              end
+              true
             end
-            m = Groonga["Messages"].select { |m| m.path == path }.first&.key
-            if m
-              m.delete
-            end
-            true
           else
             false
           end
@@ -267,14 +265,14 @@ module Mournmail
                          doc: "View source of a mail.") do
       uid = selected_uid
       Mournmail.background do
-        source, = read_current_mail
+        mail, = read_current_mail
         next_tick do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
                                              undo_limit: 0, read_only: true)
           source_buffer.read_only_edit do
             source_buffer.clear
-            source_buffer.insert(source.gsub(/\r\n/, "\n"))
+            source_buffer.insert(mail.raw_source.gsub(/\r\n/, "\n"))
             source_buffer.file_format = :dos
             source_buffer.beginning_of_buffer
           end
@@ -295,12 +293,12 @@ module Mournmail
           uids.push(uid)
         end
       end
+      summary = Mournmail.current_summary
       Mournmail.background do
-        mailbox = Mournmail.current_mailbox
         id = nil
         total = nil
         mails = uids.map { |uid|
-          Mail.new(Mournmail.read_mail(mailbox, uid)[0])
+          summary.read_mail(uid)[0]
         }.select { |mail|
           mail.main_type == "message" &&
             mail.sub_type == "partial" #&&
@@ -396,54 +394,31 @@ module Mournmail
                          doc: "Prefetch mails.") do
       summary = Mournmail.current_summary
       mailbox = Mournmail.current_mailbox
-      FileUtils.mkdir_p(Mournmail.mailbox_cache_path(mailbox))
       target_uids = @buffer.to_s.scan(/^ *\d+/).map { |s|
         s.to_i
       }.select { |uid|
-        path = Mournmail.mail_cache_path(mailbox, uid)
-        !File.exist?(path)
+        summary[uid].cache_id.nil?
       }
       Mournmail.background do
         Mournmail.imap_connect do |imap|
           imap.select(mailbox)
           count = 0
-          target_uids.each_slice(10) do |uids|
+          target_uids.each_slice(20) do |uids|
             data = imap.uid_fetch(uids, "BODY[]")
             data.each do |i|
               uid = i.attr["UID"]
               s = i.attr["BODY[]"]
-              path = Mournmail.mail_cache_path(mailbox, uid)
-              Mournmail.write_mail_cache(path, s)
-              index_mail(mailbox, uid, Mail.new(s))
+              if s
+                summary[uid].cache_id = Mournmail.write_mail_cache(s)
+                if mailbox != Mournmail.account_config[:spam_mailbox]
+                  Mournmail.index_mail(summary[uid].cache_id, Mail.new(s))
+                end
+              end
             end
             count += uids.size
             progress = (count.to_f * 100 / target_uids.size).round
-              next_tick do
-                message("Prefetching mails... #{progress}%", log: false)
-              end
-          end
-        end
-        next_tick do
-          message("Done")
-        end
-      end
-    end
-
-    define_local_command(:summary_index,
-                         doc: "Index marked mails.") do
-      uids = marked_uids
-      summary = Mournmail.current_summary
-      mailbox = Mournmail.current_mailbox
-      Mournmail.background do
-        progress = 0
-        uids.each_with_index do |uid, i|
-          mail = Mail.new(Mournmail.read_mail(mailbox, uid)[0])
-          index_mail(mailbox, uid, mail)
-          new_progress = ((i + 1) * 100.0 / uids.length).floor
-          if new_progress == 100 || new_progress - progress > 0
-            progress = new_progress
             next_tick do
-              message("Indexing mails... #{progress}%", log: false)
+              message("Prefetching mails... #{progress}%", log: false)
             end
           end
         end
@@ -512,9 +487,9 @@ module Mournmail
     end
 
     def read_current_mail
-      mailbox = Mournmail.current_mailbox
+      summary = Mournmail.current_summary
       uid = selected_uid
-      Mournmail.read_mail(mailbox, uid)
+      summary.read_mail(uid)
     end
 
     def scroll_up_or_next_uid
@@ -608,90 +583,6 @@ module Mournmail
       end
     end
 
-    def find_thread_id(mail, messages_db)
-      references = Array(mail.references) | Array(mail.in_reply_to)
-      if references.empty?
-        mail.message_id
-      else
-        parent = messages_db.select { |m|
-          references.inject(nil) { |cond, ref|
-            if cond.nil?
-              m.message_id == ref
-            else
-              cond | (m.message_id == ref)
-            end
-          }
-        }.first
-        if parent
-          parent.thread_id
-        else
-          mail.message_id
-        end
-      end
-    end
-
-    def header_text(s)
-      s.to_s.force_encoding(Encoding::UTF_8).scrub("?")
-    end
-    
-    def body_text(mail)
-      if mail.multipart?
-        mail.parts.map { |part|
-          part_text(part)
-        }.join("\n")
-      else
-        s = mail.body.decoded
-        Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
-      end
-    rescue Mail::UnknownEncodingType, Encoding::InvalidByteSequenceError
-      ""
-    end
-    
-    def part_text(part)
-      if part.multipart?
-        part.parts.map { |part|
-          part_text(part)
-        }.join("\n")
-      elsif part.main_type == "message" && part.sub_type == "rfc822"
-        mail = Mail.new(part.body.raw_source)
-        body_text(mail)
-      elsif part.attachment?
-        ""
-      else
-        if part.main_type == "text" && part.sub_type == "plain"
-          part.decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
-        else
-          ""
-        end
-      end
-    end
-
-    def index_mail(mailbox, uid, mail)
-      if mailbox == CONFIG[:mournmail_spam_mailbox]
-        return
-      end
-      messages_db = Groonga["Messages"]
-      id = mail.message_id.to_s + "_" +
-        Digest::SHA256.hexdigest(mail.header.to_s)
-      unless messages_db.has_key?(id)
-        thread_id = find_thread_id(mail, messages_db)
-        mail_path = File.join(Mournmail.mailbox_cache_path(mailbox),
-                              uid.to_s)
-        list_id = (mail["List-Id"] || mail["X-ML-Name"])
-        messages_db.add(id,
-                        path: mail_path,
-                        message_id: header_text(mail.message_id),
-                        thread_id: header_text(thread_id),
-                        date: mail.date&.to_time,
-                        subject: header_text(mail.subject),
-                        from: header_text(mail["From"]),
-                        to: header_text(mail["To"]),
-                        cc: header_text(mail["Cc"]),
-                        list_id: header_text(list_id),
-                        body: body_text(mail))
-      end
-    end
-
     def show_search_result(messages,
                            query: nil, buffer_name: "*search result*")
       summary_text = messages.map { |m|
@@ -730,16 +621,10 @@ module Mournmail
     end
 
     def refile_mails(imap, src_mailbox, uids, dst_mailbox)
-      if dst_mailbox
-        FileUtils.mkdir_p(Mournmail.mailbox_cache_path(dst_mailbox))
-      end
       count = 0
       uids.each_slice(100) do |uid_set|
         if dst_mailbox
           imap.uid_copy(uid_set, dst_mailbox) 
-          uid_set.each do |uid|
-            move_mail(src_mailbox, uid, dst_mailbox)
-          end
         end
         imap.uid_store(uid_set, "+FLAGS", [:Deleted])
         count += uid_set.size
@@ -759,20 +644,6 @@ module Mournmail
         else
           message("Deleted mails")
         end
-      end
-    end
-
-    def move_mail(src_mailbox, uid, dst_mailbox)
-      src_path = Mournmail.mail_cache_path(src_mailbox, uid)
-      dst_path = Mournmail.mail_cache_path(dst_mailbox, uid)
-      begin
-        File.rename(src_path, dst_path)
-      rescue Errno::ENOENT
-      end
-      messages_db = Groonga["Messages"]
-      m = messages_db.select { |m| m.path == src_path }.first&.key
-      if m
-        m.path = dst_path
       end
     end
 

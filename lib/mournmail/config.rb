@@ -22,5 +22,4 @@ module Textbringer
   CONFIG[:mournmail_link_open_comamnd] = "xdg-open"
   CONFIG[:mournmail_outbox] = nil
   CONFIG[:mournmail_addresses_path] = File.expand_path("~/.addresses")
-  CONFIG[:mournmail_spam_mailbox] = "spam"
 end

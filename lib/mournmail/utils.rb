@@ -5,6 +5,7 @@ require "net/imap"
 require "time"
 require "fileutils"
 require "timeout"
+require "digest"
 require "groonga"
 
 module Mournmail
@@ -196,43 +197,118 @@ module Mournmail
   end
 
   def self.mailbox_cache_path(mailbox)
-    File.expand_path("cache/#{current_account}/#{mailbox}",
+    File.expand_path("cache/#{current_account}/mailboxes/#{mailbox}",
                      CONFIG[:mournmail_directory])
   end
 
-  def self.mail_cache_path(mailbox, uid)
-    File.join(mailbox_cache_path(mailbox), uid.to_s)
+  def self.mail_cache_path(cache_id)
+    dir = cache_id[0, 2]
+    File.expand_path("cache/#{current_account}/mails/#{dir}/#{cache_id}",
+                     CONFIG[:mournmail_directory])
   end
 
-  def self.write_mail_cache(path, s)
+  def self.read_mail_cache(cache_id)
+    path = Mournmail.mail_cache_path(cache_id)
+    File.read(path)
+  end
+
+  def self.write_mail_cache(s)
+    header = s.slice(/.*\r\n\r\n/m)
+    cache_id = Digest::SHA256.hexdigest(header)
+    path = mail_cache_path(cache_id)
     dir = File.dirname(path)
     base = File.basename(path)
-    f = Tempfile.create(["#{base}-", ".tmp"], dir)
     begin
-      f.write(s)
-    ensure
-      f.close
-    end
-    File.rename(f.path, path)
-  end
-
-  def self.read_mail(mailbox, uid)
-    path = mail_cache_path(mailbox, uid)
-    begin
-      File.open(path) do |f|
-        [f.read, false]
+      f = Tempfile.create(["#{base}-", ".tmp"], dir)
+      begin
+        f.write(s)
+      ensure
+        f.close
       end
     rescue Errno::ENOENT
-      imap_connect do |imap|
-        imap.select(mailbox)
-        data = imap.uid_fetch(uid, "BODY[]")
-        if data.empty?
-          raise EditorError, "No such mail: #{uid}"
+      FileUtils.mkdir_p(File.dirname(path))
+      retry
+    end
+    File.rename(f.path, path)
+    cache_id
+  end
+
+  def self.index_mail(cache_id, mail)
+    messages_db = Groonga["Messages"]
+    unless messages_db.has_key?(cache_id)
+      thread_id = find_thread_id(mail, messages_db)
+      list_id = (mail["List-Id"] || mail["X-ML-Name"])
+      messages_db.add(cache_id,
+                      message_id: header_text(mail.message_id),
+                      thread_id: header_text(thread_id),
+                      date: mail.date&.to_time,
+                      subject: header_text(mail.subject),
+                      from: header_text(mail["From"]),
+                      to: header_text(mail["To"]),
+                      cc: header_text(mail["Cc"]),
+                      list_id: header_text(list_id),
+                      body: body_text(mail))
+    end
+  end
+
+  class << self
+    private
+
+    def find_thread_id(mail, messages_db)
+      references = Array(mail.references) | Array(mail.in_reply_to)
+      if references.empty?
+        mail.message_id
+      else
+        parent = messages_db.select { |m|
+          references.inject(nil) { |cond, ref|
+            if cond.nil?
+              m.message_id == ref
+            else
+              cond | (m.message_id == ref)
+            end
+          }
+        }.first
+        if parent
+          parent.thread_id
+        else
+          mail.message_id
         end
-        s = data[0].attr["BODY[]"]
-        FileUtils.mkdir_p(File.dirname(path))
-        write_mail_cache(path, s)
-        [s, true]
+      end
+    end
+
+    def header_text(s)
+      s.to_s.force_encoding(Encoding::UTF_8).scrub("?")
+    end
+    
+    def body_text(mail)
+      if mail.multipart?
+        mail.parts.map { |part|
+          part_text(part)
+        }.join("\n")
+      else
+        s = mail.body.decoded
+        Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
+      end
+    rescue Mail::UnknownEncodingType, Encoding::InvalidByteSequenceError
+      ""
+    end
+    
+    def part_text(part)
+      if part.multipart?
+        part.parts.map { |part|
+          part_text(part)
+        }.join("\n")
+      elsif part.main_type == "message" && part.sub_type == "rfc822"
+        mail = Mail.new(part.body.raw_source)
+        body_text(mail)
+      elsif part.attachment?
+        ""
+      else
+        if part.main_type == "text" && part.sub_type == "plain"
+          part.decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+        else
+          ""
+        end
       end
     end
   end
@@ -278,7 +354,6 @@ module Mournmail
     db = Groonga::Database.create(path: db_path)
 
     Groonga::Schema.create_table("Messages", :type => :hash) do |table|
-      table.short_text("path")
       table.short_text("message_id")
       table.short_text("thread_id")
       table.time("date")
