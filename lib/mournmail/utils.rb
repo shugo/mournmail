@@ -17,20 +17,33 @@ module Mournmail
     HAVE_MAIL_GPG = false
   end
 
-  def self.define_variable(name, value = nil)
+  def self.define_variable(name, initial_value: nil, attr: nil)
     var_name = "@" + name.to_s
     if !instance_variable_defined?(var_name)
-      instance_variable_set(var_name, value)
+      instance_variable_set(var_name, initial_value)
     end
-    singleton_class.send(:attr_accessor, name)
+    case attr
+    when :accessor
+      singleton_class.send(:attr_accessor, name)
+    when :reader
+      singleton_class.send(:attr_reader, name)
+    when :writer
+      singleton_class.send(:attr_writer, name)
+    end
   end
 
-  define_variable :current_mailbox
-  define_variable :current_summary
-  define_variable :current_uid
-  define_variable :current_mail
-  define_variable :background_thread
-  define_variable :keep_alive_thread
+  define_variable :current_mailbox, attr: :accessor
+  define_variable :current_summary, attr: :accessor
+  define_variable :current_uid, attr: :accessor
+  define_variable :current_mail, attr: :accessor
+  define_variable :background_thread, attr: :accessor
+  define_variable :keep_alive_thread, attr: :accessor
+  define_variable :imap
+  define_variable :imap_mutex, initial_value: Mutex.new
+  define_variable :mailboxes, initial_value: []
+  define_variable :current_account
+  define_variable :account_config
+  define_variable :groonga_db
 
   def self.background(skip_if_busy: false)
     if background_thread&.alive?
@@ -103,12 +116,6 @@ module Mournmail
   rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
     escape_binary(s)
   end
-
-  @imap = nil
-  @imap_mutex = Mutex.new
-  @mailboxes = []
-  @current_account = nil
-  @account_config = nil
 
   def self.current_account
     init_current_account
@@ -339,8 +346,6 @@ module Mournmail
       end
     end.gsub(/\r\n/, "\n")
   end
-
-  @groonga_db = nil
 
   def self.open_groonga_db
     db_path = File.expand_path("groonga/#{current_account}/messages.db",
