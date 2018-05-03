@@ -346,16 +346,13 @@ module Mournmail
             refile_mails(imap, source_mailbox, item_uids, mailbox)
           end
           imap.expunge
-        end
-        next_tick do
-          mournmail_summary_sync(source_mailbox, true)
-          message("Done")
+          delete_from_summary(summary, uids, "Archived messages")
         end
       end
     end
 
     define_local_command(:summary_refile,
-                         doc: "Archive marked mails.") do
+                         doc: "Refile marked mails.") do
       |mailbox = Mournmail.read_mailbox_name("Refile mails: ")|
       uids = marked_uids
       summary = Mournmail.current_summary
@@ -373,11 +370,7 @@ module Mournmail
             end
           end
           refile_mails(imap, source_mailbox, uids, mailbox)
-          imap.expunge
-        end
-        next_tick do
-          mournmail_summary_sync(source_mailbox, true)
-          message("Done")
+          delete_from_summary(summary, uids, "Refiled messages")
         end
       end
     end
@@ -659,6 +652,21 @@ module Mournmail
         complete_for_minibuffer(s, CONFIG[:mournmail_accounts].keys)
       }
       read_from_minibuffer(prompt, completion_proc: f, **opts)
+    end
+
+    def delete_from_summary(summary, uids, msg)
+      summary.delete_item_if do |item|
+        uids.include?(item.uid)
+      end
+      summary_text = summary.to_s
+      summary.save
+      next_tick do
+        @buffer.read_only_edit do
+          @buffer.clear
+          @buffer.insert(summary_text)
+        end
+        message(msg)
+      end
     end
   end
 end
