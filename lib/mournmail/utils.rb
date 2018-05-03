@@ -310,7 +310,7 @@ module Mournmail
         mail = Mail.new(part.body.raw_source)
         body_text(mail)
       elsif part.attachment?
-        ""
+        force_utf8(part.filename.to_s)
       else
         if part.main_type == "text" && part.sub_type == "plain"
           force_utf8(part.decoded).sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
