@@ -289,7 +289,7 @@ module Mournmail
         s = mail.body.decoded
         Mournmail.to_utf8(s, mail.charset).gsub(/\r\n/, "\n")
       end
-    rescue Mail::UnknownEncodingType, Encoding::InvalidByteSequenceError
+    rescue
       ""
     end
     
@@ -310,6 +310,8 @@ module Mournmail
           ""
         end
       end
+    rescue
+      ""
     end
   end
 
