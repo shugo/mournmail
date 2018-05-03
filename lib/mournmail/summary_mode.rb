@@ -421,6 +421,7 @@ module Mournmail
               message("Prefetching mails... #{progress}%", log: false)
             end
           end
+          summary.save
         end
         next_tick do
           message("Done")
