@@ -413,12 +413,8 @@ module Mournmail
               uid = i.attr["UID"]
               s = i.attr["BODY[]"]
               path = Mournmail.mail_cache_path(mailbox, uid)
-              if s.size == 0
-                message("Message is empty: UID=#{uid}")
-              else
-                Mournmail.write_mail_cache(path, s)
-                index_mail(mailbox, uid, Mail.new(s))
-              end
+              Mournmail.write_mail_cache(path, s)
+              index_mail(mailbox, uid, Mail.new(s))
             end
             count += uids.size
             progress = (count.to_f * 100 / target_uids.size).round

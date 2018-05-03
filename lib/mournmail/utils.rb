@@ -205,19 +205,21 @@ module Mournmail
   end
 
   def self.write_mail_cache(path, s)
-    tmp_path = path + ".tmp"
-    File.open(path, "w", 0600) do |f|
-      f.flock(File::LOCK_EX)
-      File.write(tmp_path, s, perm: 0600)
-      File.rename(tmp_path, path)
+    dir = File.dirname(path)
+    base = File.basename(path)
+    f = Tempfile.create(["#{base}-", ".tmp"], dir)
+    begin
+      f.write(s)
+    ensure
+      f.close
     end
+    File.rename(f.path, path)
   end
 
   def self.read_mail(mailbox, uid)
     path = mail_cache_path(mailbox, uid)
     begin
       File.open(path) do |f|
-        f.flock(File::LOCK_SH)
         [f.read, false]
       end
     rescue Errno::ENOENT
