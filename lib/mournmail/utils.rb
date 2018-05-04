@@ -189,9 +189,8 @@ module Mournmail
     imap_connect do |imap|
       imap.select(mailbox)
       uidvalidity = imap.responses["UIDVALIDITY"].last
-      if summary.uidvalidity.nil?
-        summary.uidvalidity = uidvalidity
-      elsif uidvalidity && uidvalidity != summary.uidvalidity
+      if uidvalidity && summary.uidvalidity &&
+          uidvalidity != summary.uidvalidity
         clear = next_tick {
           yes_or_no?("UIDVALIDITY has been changed; Clear cache?")
         }
@@ -199,6 +198,7 @@ module Mournmail
           summary = Mournmail::Summary.new(mailbox)
         end
       end
+      summary.uidvalidity = uidvalidity
       first_uid = (summary.last_uid || 0) + 1
       data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
       summary.synchronize do
