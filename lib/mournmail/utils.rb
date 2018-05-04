@@ -7,6 +7,7 @@ require "tempfile"
 require "fileutils"
 require "timeout"
 require "digest"
+require "nkf"
 require "groonga"
 
 module Mournmail
@@ -357,8 +358,8 @@ module Mournmail
     else
       begin
         s.encode(Encoding::UTF_8, charset, replace: "?")
-      rescue Encoding::ConverterNotFoundError
-        force_utf8(s)
+      rescue
+        force_utf8(NKF.nkf("-w", s))
       end
     end.gsub(/\r\n/, "\n")
   end

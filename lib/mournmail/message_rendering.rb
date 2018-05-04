@@ -33,7 +33,7 @@ module Mournmail
           }.join
         else
           s = body.decoded
-          Mournmail.to_utf8(s, charset).gsub(/\r\n/, "\n")
+          Mournmail.to_utf8(s, charset)
         end + pgp_signature
       end
 
