@@ -391,7 +391,7 @@ module Mournmail
           begin
             target_uids.each_slice(20) do |uids|
               data = imap.uid_fetch(uids, "BODY[]")
-              data.each do |i|
+              data&.each do |i|
                 uid = i.attr["UID"]
                 s = i.attr["BODY[]"]
                 if s
