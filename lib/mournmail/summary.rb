@@ -126,7 +126,7 @@ module Mournmail
           Mournmail.imap_connect do |imap|
             imap.select(@mailbox)
             data = imap.uid_fetch(uid, "BODY[]")
-            if data.empty?
+            if data.nil? || data.empty?
               raise EditorError, "No such mail: #{uid}"
             end
             s = data[0].attr["BODY[]"]
