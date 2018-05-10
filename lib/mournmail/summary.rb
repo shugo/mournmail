@@ -82,12 +82,14 @@ module Mournmail
 
     def add_item(item, message_id, in_reply_to)
       synchronize do
-        parent = @message_id_table[in_reply_to]
-        if parent
-          parent.add_reply(item)
-        else
-          @items.push(item)
-        end
+# Disable threads
+#        parent = @message_id_table[in_reply_to]
+#        if parent
+#          parent.add_reply(item)
+#        else
+#          @items.push(item)
+#        end
+        @items.push(item)
         if message_id
           @message_id_table[message_id] = item
         end
@@ -112,6 +114,12 @@ module Mournmail
     def [](uid)
       synchronize do
         @uid_table[uid]
+      end
+    end
+
+    def uids
+      synchronize do
+        @uid_table.keys
       end
     end
 

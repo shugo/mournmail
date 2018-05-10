@@ -199,8 +199,10 @@ module Mournmail
         end
       end
       summary.uidvalidity = uidvalidity
-      first_uid = (summary.last_uid || 0) + 1
-      data = imap.uid_fetch(first_uid..-1, ["UID", "ENVELOPE", "FLAGS"])
+      uids = imap.uid_search("ALL")
+      new_uids = uids - summary.uids
+      return summary if new_uids.empty?
+      data = imap.uid_fetch(new_uids, ["UID", "ENVELOPE", "FLAGS"])
       summary.synchronize do
         data&.each do |i|
           uid = i.attr["UID"]
