@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 using Mournmail::MessageRendering
 
 module Mournmail
@@ -9,7 +11,8 @@ module Mournmail
     MESSAGE_MODE_MAP.define_key("s", :message_save_part_command)
 
     # See http://nihongo.jp/support/mail_guide/dev_guide.txt
-    URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^] 　\t\n>.,:)"]+/
+    MAILTO_REGEXP = URI.regexp("mailto")
+    URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
@@ -126,8 +129,24 @@ module Mournmail
     end
 
     def open_uri(uri)
-      system(*CONFIG[:mournmail_link_open_comamnd], uri,
-             out: File::NULL, err: File::NULL)
+      case uri
+      when /\Amailto:/
+        u = URI.parse(uri)
+        if u.headers.assoc("subject")
+          re = /^To:\s*\nSubject:\s*\n/
+        else
+          re = /^To:\s*\n/
+        end
+        Commands.mail
+        beginning_of_buffer
+        re_search_forward(re)
+        replace_match("")
+        insert u.to_mailtext.sub(/\n\n\z/, "")
+        end_of_buffer
+      else
+        system(*CONFIG[:mournmail_link_open_comamnd], uri,
+               out: File::NULL, err: File::NULL)
+      end
     end
   end
 end
