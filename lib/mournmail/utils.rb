@@ -12,11 +12,8 @@ require "groonga"
 
 module Mournmail
   begin
-    # Disable PGP
-    # https://www.eff.org/deeplinks/2018/05/attention-pgp-users-new-vulnerabilities-require-you-take-action-now
-    HAVE_MAIL_GPG = false
-    # require "mail-gpg"
-    # HAVE_MAIL_GPG = true
+    require "mail-gpg"
+    HAVE_MAIL_GPG = true
   rescue LoadError
     HAVE_MAIL_GPG = false
   end
