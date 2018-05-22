@@ -21,6 +21,7 @@ module Mournmail
     SEARCH_RESULT_MODE_MAP.define_key(">", :next_page_command)
     SEARCH_RESULT_MODE_MAP.define_key("/", :summary_search_command)
     SEARCH_RESULT_MODE_MAP.define_key("t", :summary_show_thread_command)
+    SEARCH_RESULT_MODE_MAP.define_key("@", :summary_change_account_command)
 
     def initialize(buffer)
       super(buffer)
