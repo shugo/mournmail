@@ -33,7 +33,7 @@ module Mournmail
       return if num.nil?
       Mournmail.background do
         message = @buffer[:messages][num]
-        if message.nil?
+        if message.nil? || message._key.nil?
           raise EditorError, "No message found"
         end
         mail = Mail.new(Mournmail.read_mail_cache(message._key))
