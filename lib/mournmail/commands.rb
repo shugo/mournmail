@@ -5,9 +5,12 @@ define_command(:mournmail, doc: "Start mournmail.") do
   mournmail_visit_mailbox("INBOX")
 end
 
-define_command(:mournmail_visit_mailbox, doc: "Start mournmail.") do
+define_command(:mournmail_visit_mailbox, doc: "Visit mailbox") do
   |mailbox = Mournmail.read_mailbox_name("Visit mailbox: ", default: "INBOX")|
-  mournmail_summary_sync(mailbox)
+  summary = Mournmail::Summary.load_or_new(mailbox)
+  next_tick do
+    Mournmail.show_summary(summary)
+  end
 end
 
 define_command(:mournmail_summary_sync, doc: "Sync summary.") do
@@ -16,30 +19,10 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
   message("Syncing #{mailbox} in background...")
   Mournmail.background do
     summary = Mournmail.fetch_summary(mailbox, all: all)
-    summary_text = summary.to_s
     summary.save
     next_tick do
-      buffer = Buffer.find_or_new("*summary*", undo_limit: 0,
-                                  read_only: true)
-      buffer.apply_mode(Mournmail::SummaryMode)
-      buffer.read_only_edit do
-        buffer.clear
-        buffer.insert(summary_text)
-      end
-      switch_to_buffer(buffer)
-      Mournmail.current_mailbox = mailbox
-      Mournmail.current_summary = summary
-      Mournmail.current_mail = nil
-      Mournmail.current_uid = nil
+      Mournmail.show_summary(summary)
       message("Syncing #{mailbox} in background... Done")
-      begin
-        buffer.beginning_of_buffer
-        buffer.re_search_forward(/^ *\d+ u/)
-      rescue SearchError
-        buffer.end_of_buffer
-        buffer.re_search_backward(/^ *\d+ /, raise_error: false)
-      end
-      summary_read_command
     end
   end
 end

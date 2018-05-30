@@ -6,7 +6,7 @@ require "monitor"
 
 module Mournmail
   class Summary
-    attr_reader :items, :last_uid
+    attr_reader :mailbox, :items, :last_uid
     attr_accessor :uidvalidity
 
     include MonitorMixin

@@ -223,6 +223,29 @@ module Mournmail
     summary
   end
 
+  def self.show_summary(summary)
+    buffer = Buffer.find_or_new("*summary*", undo_limit: 0,
+                                read_only: true)
+    buffer.apply_mode(Mournmail::SummaryMode)
+    buffer.read_only_edit do
+      buffer.clear
+      buffer.insert(summary.to_s)
+    end
+    switch_to_buffer(buffer)
+    Mournmail.current_mailbox = summary.mailbox
+    Mournmail.current_summary = summary
+    Mournmail.current_mail = nil
+    Mournmail.current_uid = nil
+    begin
+      buffer.beginning_of_buffer
+      buffer.re_search_forward(/^ *\d+ u/)
+    rescue SearchError
+      buffer.end_of_buffer
+      buffer.re_search_backward(/^ *\d+ /, raise_error: false)
+    end
+    summary_read_command
+  end
+
   def self.mailbox_cache_path(mailbox)
     File.expand_path("cache/#{current_account}/mailboxes/#{mailbox}",
                      CONFIG[:mournmail_directory])
