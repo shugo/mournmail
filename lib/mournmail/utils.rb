@@ -308,7 +308,7 @@ module Mournmail
       references = Array(mail.references) | Array(mail.in_reply_to)
       if references.empty?
         mail.message_id
-      elsif /\Aredmine.issue-/ =~ references.first
+      elsif /\Aredmine\.issue-/ =~ references.first
         references.first
       else
         parent = messages_db.select { |m|
