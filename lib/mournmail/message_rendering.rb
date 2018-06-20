@@ -76,7 +76,8 @@ module Mournmail
       def render(indices)
         index = indices.join(".")
         type = Mail::Encodings.decode_encode(self["content-type"].to_s,
-                                             :decode)
+                                             :decode) rescue
+          "broken/type; error=\"#{$!} (#{$!.class})\""
         "[#{index} #{type}]\n" + render_content(indices)
       end
 
@@ -113,6 +114,8 @@ module Mournmail
             ""
           end
         end
+      rescue => e
+        "Broken part: #{e} (#{e.class})"
       end
     end
   end
