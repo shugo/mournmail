@@ -453,6 +453,9 @@ module Mournmail
     define_local_command(:summary_change_account,
                          doc: "Change the current account.") do
       |account = read_account_name("Change account: ")|
+      if Mournmail.background_thread
+        raise EditorError, "Background thread is running"
+      end
       mournmail_quit
       Mournmail.current_account = account
       mournmail
