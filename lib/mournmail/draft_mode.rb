@@ -92,6 +92,8 @@ module Mournmail
           next_tick do
             message("Mail sent.")
           end
+          cache_id = Mournmail.write_mail_cache(m.encoded)
+          Mournmail.index_mail(cache_id, m)
           outbox = Mournmail.account_config[:outbox_mailbox]
           if outbox
             Mournmail.imap_connect do |imap|
