@@ -58,7 +58,7 @@ module Mournmail
         mail, fetched = summary.read_mail(uid)
         next_tick do
           show_message(mail)
-          mark_as_seen(uid, !fetched)
+          mark_as_seen(uid, false)
           Mournmail.current_uid = uid
           Mournmail.current_mail = mail
         end
