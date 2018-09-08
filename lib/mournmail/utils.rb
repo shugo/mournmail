@@ -381,7 +381,7 @@ module Mournmail
 
   def self.to_utf8(s, charset)
     if /\Autf-8\z/i =~ charset
-      force_utf8(s)
+      force_utf8(s.dup)
     else
       begin
         s.encode(Encoding::UTF_8, charset, replace: "?")
