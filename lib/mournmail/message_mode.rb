@@ -10,15 +10,17 @@ module Mournmail
     MESSAGE_MODE_MAP = Keymap.new
     MESSAGE_MODE_MAP.define_key("\C-m", :message_open_link_or_part_command)
     MESSAGE_MODE_MAP.define_key("s", :message_save_part_command)
+    MESSAGE_MODE_MAP.define_key("\t", :message_next_link_or_part_command)
 
     # See http://nihongo.jp/support/mail_guide/dev_guide.txt
     MAILTO_REGEXP = URI.regexp("mailto")
     URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
+    MIME_REGEXP = /^\[(([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
+    URI_OR_MIME_REGEXP = /#{URI_REGEXP}|#{MIME_REGEXP}/
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
-    define_syntax :mime_part,
-      /^\[(([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
+    define_syntax :mime_part, MIME_REGEXP
     define_syntax :link, URI_REGEXP
 
     def initialize(buffer)
@@ -47,6 +49,15 @@ module Mournmail
       path = read_file_name("Save: ", default: default_path)
       if !File.exist?(path) || yes_or_no?("File exists; overwrite?")
         File.write(path, part.decoded)
+      end
+    end
+
+    define_local_command(:message_next_link_or_part,
+                         doc: "Go to the next link or MIME part.") do
+      if @buffer.re_search_forward(URI_OR_MIME_REGEXP, raise_error: false)
+        goto_char(@buffer.match_beginning(0))
+      else
+        @buffer.beginning_of_buffer
       end
     end
 
