@@ -266,14 +266,14 @@ module Mournmail
     end
 
     def format_flags(flags)
-      if flags.include?(:Deleted)
+      if !flags.include?(:Seen)
+        "u"
+      elsif flags.include?(:Deleted)
         "d"
       elsif flags.include?(:Flagged)
         "$"
       elsif flags.include?(:Answered)
         "a"
-      elsif !flags.include?(:Seen)
-        "u"
       else
         " "
       end
