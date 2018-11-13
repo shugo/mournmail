@@ -143,10 +143,15 @@ module Mournmail
         start_pos = @buffer.point
         s = @buffer.substring(start_pos, end_pos)
         if !s.empty?
-          re = /^(.*")?#{Regexp.quote(s)}.*/
-          line = File.read(CONFIG[:mournmail_addresses_path]).slice(re)
-          if line
-            addr = line.slice(/^\S+/)
+          re = /^(?:.*")?#{Regexp.quote(s)}.*/
+          addrs = File.read(CONFIG[:mournmail_addresses_path])
+            .scan(re).map { |line| line.slice(/^\S+/) }
+          if !addrs.empty?
+            addr = addrs.inject { |x, y|
+              x.chars.zip(y.chars).take_while { |i, j|
+                i == j
+              }.map { |i,| i }.join
+            }
             @buffer.delete_region(start_pos, end_pos)
             @buffer.insert(addr)
           else
