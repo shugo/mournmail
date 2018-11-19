@@ -31,9 +31,14 @@ module Mournmail
           parts.each_with_index.map { |part, i|
             part.render([*indices, i])
           }.join
-        else
+        elsif main_type == "text" && sub_type == "plain"
           s = body.decoded
           Mournmail.to_utf8(s, charset)
+        else
+          type = Mail::Encodings.decode_encode(self["content-type"].to_s,
+                                               :decode) rescue
+          "broken/type; error=\"#{$!} (#{$!.class})\""
+          "[-1 #{type}]\n"
         end + pgp_signature
       end
 
@@ -41,6 +46,9 @@ module Mournmail
         if HAVE_MAIL_GPG && encrypted?
           mail = decrypt(verify: true)
           return mail.dig_part(i, *rest_indices)
+        end
+        if i == -1
+          return self
         end
         part = parts[i]
         if rest_indices.empty?
