@@ -31,7 +31,7 @@ module Mournmail
           parts.each_with_index.map { |part, i|
             part.render([*indices, i])
           }.join
-        elsif main_type == "text" && sub_type == "plain"
+        elsif main_type.nil? || (main_type == "text" && sub_type == "plain")
           s = body.decoded
           Mournmail.to_utf8(s, charset)
         else
