@@ -37,7 +37,7 @@ module Mournmail
           raise EditorError, "No message found"
         end
         mail = Mail.new(Mournmail.read_mail_cache(message._key))
-        next_tick do
+        foreground do
           show_message(mail)
           @buffer[:message_number] = num
         end

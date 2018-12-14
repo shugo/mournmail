@@ -8,7 +8,7 @@ end
 define_command(:mournmail_visit_mailbox, doc: "Visit mailbox") do
   |mailbox = Mournmail.read_mailbox_name("Visit mailbox: ", default: "INBOX")|
   summary = Mournmail::Summary.load_or_new(mailbox)
-  next_tick do
+  foreground do
     Mournmail.show_summary(summary)
   end
 end
@@ -20,7 +20,7 @@ define_command(:mournmail_summary_sync, doc: "Sync summary.") do
   Mournmail.background do
     summary = Mournmail.fetch_summary(mailbox, all: all)
     summary.save
-    next_tick do
+    foreground do
       Mournmail.show_summary(summary)
       message("Syncing #{mailbox} in background... Done")
     end

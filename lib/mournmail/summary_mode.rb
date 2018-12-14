@@ -56,7 +56,7 @@ module Mournmail
       summary = Mournmail.current_summary
       Mournmail.background do
         mail, fetched = summary.read_mail(uid)
-        next_tick do
+        foreground do
           show_message(mail)
           mark_as_seen(uid, false)
           Mournmail.current_uid = uid
@@ -101,7 +101,7 @@ module Mournmail
       Mournmail.background do
         mail = read_current_mail[0]
         body = mail.render_body
-        next_tick do
+        foreground do
           Window.current = Mournmail.message_window
           Commands.mail(run_hooks: false)
           if reply_all
@@ -243,7 +243,7 @@ module Mournmail
         end
         summary_text = summary.to_s
         summary.save
-        next_tick do
+        foreground do
           buffer.read_only_edit do
             buffer.clear
             buffer.insert(summary_text)
@@ -258,7 +258,7 @@ module Mournmail
       uid = selected_uid
       Mournmail.background do
         mail, = read_current_mail
-        next_tick do
+        foreground do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
                                              undo_limit: 0, read_only: true)
@@ -305,7 +305,7 @@ module Mournmail
         end
         s = mails.map { |mail| mail.body.decoded }.join
         mail = Mail.new(s)
-        next_tick do
+        foreground do
           show_message(mail)
           Mournmail.current_uid = nil
           Mournmail.current_mail = mail
@@ -363,7 +363,7 @@ module Mournmail
       Mournmail.background do
         Mournmail.imap_connect do |imap|
           unless imap.list("", mailbox)
-            if next_tick! { yes_or_no?("#{mailbox} doesn't exist; Create?") }
+            if foreground! { yes_or_no?("#{mailbox} doesn't exist; Create?") }
               imap.create(mailbox)
             else
               next
@@ -404,7 +404,7 @@ module Mournmail
               end
               count += uids.size
               progress = (count.to_f * 100 / target_uids.size).round
-              next_tick do
+              foreground do
                 message("Prefetching mails... #{progress}%", log: false)
               end
             end
@@ -412,7 +412,7 @@ module Mournmail
             summary.save
           end
         end
-        next_tick do
+        foreground do
           message("Done")
         end
       end
@@ -428,7 +428,7 @@ module Mournmail
             match_record.subject | match_record.body
           }
         }.paginate([["date", :desc]], page: page, size: 100)
-        next_tick do
+        foreground do
           show_search_result(messages, query: query)
           message("Searched (#{messages.current_page}/#{messages.n_pages})")
         end
@@ -442,7 +442,7 @@ module Mournmail
         messages = Groonga["Messages"].select { |m|
           m.thread_id == message.thread_id
         }.sort([["date", :asc]])
-        next_tick do
+        foreground do
           show_search_result(messages, buffer_name: "*thread*")
           i = messages.find_index { |m| m._key == message._key }
           Buffer.current.goto_line(i + 1)
@@ -537,7 +537,7 @@ module Mournmail
         Mournmail.background do
           summary_item.toggle_flag(flag)
           Mournmail.current_summary.save
-          next_tick do
+          foreground do
             update_flags(summary_item)
           end
         end
@@ -622,7 +622,7 @@ module Mournmail
         imap.uid_store(uid_set, "+FLAGS", [:Deleted])
         count += uid_set.size
         progress = (count.to_f * 100 / uids.size).round
-        next_tick do
+        foreground do
           if dst_mailbox
             message("Refiling mails to #{dst_mailbox}... #{progress}%",
                     log: false)
@@ -631,7 +631,7 @@ module Mournmail
           end 
         end
       end
-      next_tick do
+      foreground do
         if dst_mailbox
           message("Refiled mails to #{dst_mailbox}")
         else
@@ -663,7 +663,7 @@ module Mournmail
       end
       summary_text = summary.to_s
       summary.save
-      next_tick do
+      foreground do
         @buffer.read_only_edit do
           @buffer.clear
           @buffer.insert(summary_text)

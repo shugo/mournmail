@@ -191,7 +191,7 @@ module Mournmail
       uidvalidity = imap.responses["UIDVALIDITY"].last
       if uidvalidity && summary.uidvalidity &&
           uidvalidity != summary.uidvalidity
-        clear = next_tick {
+        clear = foreground {
           yes_or_no?("UIDVALIDITY has been changed; Clear cache?")
         }
         if clear
@@ -217,7 +217,7 @@ module Mournmail
       summary
     end
   rescue SocketError, Timeout::Error => e
-    next_tick do
+    foreground do
       message(e.message)
     end
     summary

@@ -89,7 +89,7 @@ module Mournmail
             m.gpg(sign: pgp_sign, encrypt: pgp_encrypt)
           end
           m.deliver
-          next_tick do
+          foreground do
             message("Mail sent.")
           end
           cache_id = Mournmail.write_mail_cache(m.encoded)
@@ -103,12 +103,12 @@ module Mournmail
               imap.append(outbox, m.to_s, [:Seen])
             end
           end
-          next_tick do
+          foreground do
             kill_buffer(@buffer, force: true)
             Mournmail.back_to_summary
           end
         rescue Exception
-          next_tick do
+          foreground do
             switch_to_buffer(@buffer)
           end
           raise
