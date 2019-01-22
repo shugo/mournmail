@@ -128,7 +128,7 @@ module Mournmail
         item = @uid_table[uid]
         if item.cache_id
           File.open(Mournmail.mail_cache_path(item.cache_id)) do |f|
-            [Mail.new(f.read), false]
+            [Mournmail.parse_mail(f.read), false]
           end
         else
           Mournmail.imap_connect do |imap|
@@ -138,7 +138,7 @@ module Mournmail
               raise EditorError, "No such mail: #{uid}"
             end
             s = data[0].attr["BODY[]"]
-            mail = Mail.new(s)
+            mail = Mournmail.parse_mail(s)
             if @mailbox != Mournmail.account_config[:spam_mailbox]
               item.cache_id = Mournmail.write_mail_cache(s)
               Mournmail.index_mail(item.cache_id, mail)

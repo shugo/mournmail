@@ -437,4 +437,8 @@ module Mournmail
       @groonga_db.close
     end
   end
+
+  def self.parse_mail(s)
+    Mail.new(s.scrub("??"))
+  end
 end
