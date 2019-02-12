@@ -166,7 +166,7 @@ module Mournmail
 
     def to_s
       synchronize do
-        items.each_with_object(String.new) do |item, s|
+        items.each_with_object(+"") do |item, s|
           s << item.to_s
         end
       end
@@ -240,7 +240,7 @@ module Mournmail
 
     def format_line(limit = 78, from_limit = 16, level = 0)
       space = "  " * (level < 8 ? level : 8)
-      s = String.new
+      s = +""
       s << format("%6d %s%s %s[ %s ] ",
                   @uid, format_flags(@flags), format_date(@date), space,
                   ljust(format_from(@from), from_limit))
@@ -251,7 +251,7 @@ module Mournmail
     
     def ljust(s, n)
       width = 0
-      str = String.new
+      str = +""
       s.each_char do |c|
         w = Buffer.display_width(c)
         width += w

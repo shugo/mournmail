@@ -599,7 +599,7 @@ module Mournmail
 
     def ljust(s, n)
       width = 0
-      str = String.new
+      str = +""
       s.gsub(/\t/, " ").each_char do |c|
         w = Buffer.display_width(c)
         width += w

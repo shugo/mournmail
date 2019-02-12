@@ -22,7 +22,7 @@ module Mournmail
       b_encoding_extra_size = "=?#{charset}?B??=".bytesize
       while !words.empty?
         limit = 78 - prepend
-        line = String.new
+        line = +""
         fold_line = false
         while !fold_line && !words.empty?
           word = words.first
