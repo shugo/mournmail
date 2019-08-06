@@ -34,6 +34,10 @@ module Mournmail
       cache_path(mailbox) + ".tmp"
     end
 
+    def self.cache_old_path(mailbox)
+      cache_path(mailbox) + ".old"
+    end
+
     def self.load(mailbox)
       lock_cache(mailbox, :shared) do
         File.open(cache_path(mailbox)) do |f|
@@ -156,9 +160,11 @@ module Mournmail
         Summary.lock_cache(@mailbox, :exclusive) do
           cache_path = Summary.cache_path(@mailbox)
           tmp_path = Summary.cache_tmp_path(@mailbox)
+          old_path = Summary.cache_old_path(@mailbox)
           File.open(tmp_path, "w", 0600) do |f|
             Marshal.dump(self, f)
           end
+          File.rename(cache_path, old_path)
           File.rename(tmp_path, cache_path)
         end
       end
