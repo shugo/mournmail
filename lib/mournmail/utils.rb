@@ -202,16 +202,18 @@ module Mournmail
       uids = imap.uid_search("ALL")
       new_uids = uids - summary.uids
       return summary if new_uids.empty?
-      data = imap.uid_fetch(new_uids, ["UID", "ENVELOPE", "FLAGS"])
       summary.synchronize do
-        data&.each do |i|
-          uid = i.attr["UID"]
-          next if summary[uid]
-          env = i.attr["ENVELOPE"]
-          flags = i.attr["FLAGS"]
-          item = Mournmail::SummaryItem.new(uid, env.date, env.from,
-                                            env.subject, flags)
-          summary.add_item(item, env.message_id, env.in_reply_to)
+        new_uids.each_slice(1000) do |uid_chunk|
+          data = imap.uid_fetch(uid_chunk, ["UID", "ENVELOPE", "FLAGS"])
+          data&.each do |i|
+            uid = i.attr["UID"]
+            next if summary[uid]
+            env = i.attr["ENVELOPE"]
+            flags = i.attr["FLAGS"]
+            item = Mournmail::SummaryItem.new(uid, env.date, env.from,
+                                              env.subject, flags)
+            summary.add_item(item, env.message_id, env.in_reply_to)
+          end
         end
       end
       summary
