@@ -378,12 +378,12 @@ module Mournmail
   end
 
   def self.force_utf8(s)
-    s.force_encoding(Encoding::UTF_8).scrub("?")
+    s.dup.force_encoding(Encoding::UTF_8).scrub("?")
   end
 
   def self.to_utf8(s, charset)
     if /\Autf-8\z/i.match?(charset)
-      force_utf8(s.dup)
+      force_utf8(s)
     else
       begin
         s.encode(Encoding::UTF_8, charset, replace: "?")
