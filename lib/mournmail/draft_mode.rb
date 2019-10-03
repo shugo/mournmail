@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 module Mournmail
   class DraftMode < Textbringer::Mode
     MAIL_MODE_MAP = Keymap.new

@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 module Textbringer
   Face.define :seen, foreground: "blue"
   Face.define :deleted, foreground: "green"

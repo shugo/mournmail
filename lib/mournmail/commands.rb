@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 define_command(:mournmail, doc: "Start mournmail.") do
   Mournmail.open_groonga_db
   mournmail_visit_mailbox("INBOX")

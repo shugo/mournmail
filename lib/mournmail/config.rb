@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 module Textbringer
   CONFIG[:mournmail_directory] = File.expand_path("~/.mournmail")
   CONFIG[:mournmail_accounts] = {}

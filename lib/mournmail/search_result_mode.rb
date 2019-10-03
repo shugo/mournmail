@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 using Mournmail::MessageRendering
 
 module Mournmail
