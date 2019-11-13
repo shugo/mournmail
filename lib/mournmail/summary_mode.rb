@@ -451,6 +451,9 @@ module Mournmail
     define_local_command(:summary_change_account,
                          doc: "Change the current account.") do
       |account = read_account_name("Change account: ")|
+      unless CONFIG[:mournmail_accounts].key?(account)
+        raise EditorError, "No such account: #{account}"
+      end
       if Mournmail.background_thread
         raise EditorError, "Background thread is running"
       end
