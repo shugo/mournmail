@@ -162,7 +162,10 @@ module Mournmail
           File.open(tmp_path, "w", 0600) do |f|
             Marshal.dump(self, f)
           end
-          File.rename(cache_path, old_path)
+          begin
+            File.rename(cache_path, old_path)
+          rescue Errno::ENOENT
+          end
           File.rename(tmp_path, cache_path)
         end
       end

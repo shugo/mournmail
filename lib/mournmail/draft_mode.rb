@@ -68,10 +68,15 @@ module Mournmail
                    encoding: "binary")
       end
       conf = Mournmail.account_config
+      options = @buffer[:mournmail_delivery_options] ||
+        conf[:delivery_options]
+      if options[:authentication] == "gmail"
+        options = options.merge(authentication: "xoauth2",
+                                password: Mournmail.google_access_token)
+      end
       m.delivery_method(@buffer[:mournmail_delivery_method] ||
                         conf[:delivery_method],
-                        @buffer[:mournmail_delivery_options] ||
-                        conf[:delivery_options])
+                        options)
       bury_buffer(@buffer)
       background do
         begin

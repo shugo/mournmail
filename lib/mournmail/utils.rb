@@ -7,6 +7,36 @@ require "timeout"
 require "digest"
 require "nkf"
 require "groonga"
+require 'google/api_client/client_secrets'
+require 'google/api_client/auth/storage'
+require 'google/api_client/auth/storages/file_store'
+require 'launchy'
+
+class Net::SMTP
+  def auth_xoauth2(user, secret)
+    check_auth_args user, secret
+    res = critical {
+      s = Mournmail.xoauth2_string(user, secret)
+      get_response('AUTH XOAUTH2 ' + base64_encode(s))
+    }
+    check_auth_response res
+    res
+  end
+end
+
+class Net::IMAP::Xoauth2Authenticator
+  def process(data)
+    Mournmail.xoauth2_string(@user, @access_token)
+  end
+
+  private
+
+  def initialize(user, access_token)
+    @user = user
+    @access_token = access_token
+  end
+end
+Net::IMAP.add_authenticator("XOAUTH2", Net::IMAP::Xoauth2Authenticator)
 
 module Mournmail
   begin
@@ -147,12 +177,17 @@ module Mournmail
       end
       if @imap.nil? || @imap.disconnected?
         conf = account_config
+        auth_type = conf[:imap_options][:auth_type] || "PLAIN"
+        password = conf[:imap_options][:password]
+        if auth_type == "gmail"
+          auth_type = "XOAUTH2"
+          password = google_access_token
+        end
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(conf[:imap_host],
                                 conf[:imap_options])
-          @imap.authenticate(conf[:imap_options][:auth_type] || "PLAIN",
-                             conf[:imap_options][:user_name],
-                             conf[:imap_options][:password])
+          @imap.authenticate(auth_type, conf[:imap_options][:user_name],
+                             password)
           @mailboxes = @imap.list("", "*").map { |mbox|
             Net::IMAP.decode_utf7(mbox.name)
           }
@@ -178,6 +213,46 @@ module Mournmail
     end
   end
 
+  def self.google_access_token
+    path = File.expand_path("cache/#{current_account}/google_auth.json",
+                            CONFIG[:mournmail_directory])
+    store = Google::APIClient::FileStore.new(path)
+    storage = Google::APIClient::Storage.new(store)
+    storage.authorize
+    if storage.authorization.nil?
+      path = File.expand_path(CONFIG[:mournmail_google_client_secret_path])
+      client_secrets = Google::APIClient::ClientSecrets.load(path)
+      auth_client = client_secrets.to_authorization
+      auth_client.update!(
+        :scope => 'https://mail.google.com/',
+        :redirect_uri => 'urn:ietf:wg:oauth:2.0:oob'
+      )
+
+      auth_uri = auth_client.authorization_uri.to_s
+      Launchy.open(auth_uri)
+
+      auth_client.code = foreground! {
+        Window.echo_area.clear_message
+        Window.redisplay
+        read_from_minibuffer("Code: ").chomp
+      }
+      auth_client.fetch_access_token!
+      old_umask = File.umask(077)
+      begin
+        storage.write_credentials(auth_client)
+      ensure
+        File.umask(old_umask)
+      end
+    else
+      auth_client = storage.authorization
+    end
+    auth_client.access_token
+  end
+  
+  def self.xoauth2_string(user, access_token)
+    "user=#{user}\1auth=Bearer #{access_token}\1\1"
+  end
+
   def self.fetch_summary(mailbox, all: false)
     if all
       summary = Mournmail::Summary.new(mailbox)
@@ -189,7 +264,7 @@ module Mournmail
       uidvalidity = imap.responses["UIDVALIDITY"].last
       if uidvalidity && summary.uidvalidity &&
           uidvalidity != summary.uidvalidity
-        clear = foreground {
+        clear = foreground! {
           yes_or_no?("UIDVALIDITY has been changed; Clear cache?")
         }
         if clear

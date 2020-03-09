@@ -25,6 +25,8 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "mail"
   spec.add_runtime_dependency "mime-types"
   spec.add_runtime_dependency "rroonga"
+  spec.add_runtime_dependency "google-api-client"
+  spec.add_runtime_dependency "launchy"
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake", "~> 12.0"
