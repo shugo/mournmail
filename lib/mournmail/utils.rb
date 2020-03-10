@@ -220,7 +220,7 @@ module Mournmail
     storage = Google::APIClient::Storage.new(store)
     storage.authorize
     if storage.authorization.nil?
-      path = File.expand_path(CONFIG[:mournmail_google_client_secret_path])
+      path = File.expand_path(account_config[:client_secret_path])
       client_secrets = Google::APIClient::ClientSecrets.load(path)
       auth_client = client_secrets.to_authorization
       auth_client.update!(
