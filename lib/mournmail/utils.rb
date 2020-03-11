@@ -231,7 +231,6 @@ module Mournmail
       auth_uri = auth_client.authorization_uri.to_s
       auth_client.code = foreground! {
         begin
-          raise Launchy::CommandNotFoundError
           Launchy.open(auth_uri)
         rescue Launchy::CommandNotFoundError
           buffer = show_google_auth_uri(auth_uri)
@@ -260,8 +259,9 @@ module Mournmail
   end
 
   def self.show_google_auth_uri(auth_uri)
-    buffer = Buffer.find_or_new("*Google OAuth*",
+    buffer = Buffer.find_or_new("*message*",
                                 undo_limit: 0, read_only: true)
+    buffer.apply_mode(Mournmail::MessageMode)
     buffer.read_only_edit do
       buffer.clear
       buffer.insert(<<~EOF)
