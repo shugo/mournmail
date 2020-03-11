@@ -228,14 +228,23 @@ module Mournmail
         :scope => 'https://mail.google.com/',
         :redirect_uri => 'urn:ietf:wg:oauth:2.0:oob'
       )
-
       auth_uri = auth_client.authorization_uri.to_s
-      Launchy.open(auth_uri)
-
       auth_client.code = foreground! {
-        Window.echo_area.clear_message
-        Window.redisplay
-        read_from_minibuffer("Code: ").chomp
+        begin
+          raise Launchy::CommandNotFoundError
+          Launchy.open(auth_uri)
+        rescue Launchy::CommandNotFoundError
+          buffer = show_google_auth_uri(auth_uri)
+        end
+        begin
+          Window.echo_area.clear_message
+          Window.redisplay
+          read_from_minibuffer("Code: ").chomp
+        ensure
+          if buffer
+            kill_buffer(buffer, force: true)
+          end
+        end
       }
       auth_client.fetch_access_token!
       old_umask = File.umask(077)
@@ -248,6 +257,22 @@ module Mournmail
       auth_client = storage.authorization
     end
     auth_client.access_token
+  end
+
+  def self.show_google_auth_uri(auth_uri)
+    buffer = Buffer.find_or_new("*Google OAuth*",
+                                undo_limit: 0, read_only: true)
+    buffer.read_only_edit do
+      buffer.clear
+      buffer.insert(<<~EOF)
+        Open the following URI in your browser and type obtained code:
+
+        #{auth_uri}
+      EOF
+    end
+    window = Mournmail.message_window
+    window.buffer = buffer
+    buffer
   end
   
   def self.xoauth2_string(user, access_token)
