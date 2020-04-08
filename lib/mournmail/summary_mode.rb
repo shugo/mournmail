@@ -167,7 +167,7 @@ module Mournmail
 
     define_local_command(:summary_toggle_deleted,
                          doc: <<~EOD) do
-        Toggle Deleted.  Type `x` to expunge deleted messages.
+        Toggle Deleted.  Type `X` to expunge deleted messages.
       EOD
       toggle_flag(selected_uid, :Deleted)
     end
