@@ -66,7 +66,9 @@ module Mournmail
   define_variable :current_uid, attr: :accessor
   define_variable :current_mail, attr: :accessor
   define_variable :background_thread, attr: :accessor
+  define_variable :background_thread_mutex, initial_value: Mutex.new
   define_variable :keep_alive_thread, attr: :accessor
+  define_variable :keep_alive_thread_mutex, initial_value: Mutex.new
   define_variable :imap
   define_variable :imap_mutex, initial_value: Mutex.new
   define_variable :mailboxes, initial_value: []
@@ -75,42 +77,52 @@ module Mournmail
   define_variable :groonga_db
 
   def self.background(skip_if_busy: false)
-    if background_thread&.alive?
-      return if skip_if_busy
-    end
-    self.background_thread = Utils.background {
-      begin
-        yield
-      ensure
-        self.background_thread = nil
+    @background_thread_mutex.synchronize do
+      if background_thread&.alive?
+        if skip_if_busy
+          return
+        else
+          raise EditorError, "Another backgrond thread is running"
+        end
       end
-    }
+      self.background_thread = Utils.background {
+        begin
+          yield
+        ensure
+          self.background_thread = nil
+        end
+      }
+    end
   end
 
   def self.start_keep_alive_thread
-    if keep_alive_thread
-      raise EditorError, "Keep alive thread already running"
-    end
-    self.keep_alive_thread = Thread.start {
-      loop do
-        sleep(CONFIG[:mournmail_keep_alive_interval])
-        background(skip_if_busy: true) do
-          begin
-            imap_connect do |imap|
-              imap.noop
+    @keep_alive_thread_mutex.synchronize do
+      if keep_alive_thread
+        raise EditorError, "Keep alive thread already running"
+      end
+      self.keep_alive_thread = Thread.start {
+        loop do
+          sleep(CONFIG[:mournmail_keep_alive_interval])
+          background(skip_if_busy: true) do
+            begin
+              imap_connect do |imap|
+                imap.noop
+              end
+            rescue => e
+              message("Error in IMAP NOOP: #{e.class}: #{e.message}")
             end
-          rescue => e
-            message("Error in IMAP NOOP: #{e.class}: #{e.message}")
           end
         end
-      end
-    }
+      }
+    end
   end
 
   def self.stop_keep_alive_thread
-    if keep_alive_thread
-      keep_alive_thread&.kill
-      self.keep_alive_thread = nil
+    @keep_alive_thread_mutex.synchronize do
+      if keep_alive_thread
+        keep_alive_thread&.kill
+        self.keep_alive_thread = nil
+      end
     end
   end
 
