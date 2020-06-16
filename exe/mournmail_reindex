@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+require "groonga"
+
+if ARGV.size < 1
+  STDERR.puts "Usage: mournmail_reindex <path to messages.db>"
+  exit 1
+end
+
+Groonga::Database.open(ARGV[0])
+Groonga["Messages"].columns.each do |c|
+  print "Reindexing #{c.name}... "
+  STDOUT.flush
+  c.reindex
+  puts "done"
+end
