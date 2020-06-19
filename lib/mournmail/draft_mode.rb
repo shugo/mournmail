@@ -7,6 +7,7 @@ module Mournmail
     MAIL_MODE_MAP.define_key("\t", :draft_complete_or_insert_tab_command)
     MAIL_MODE_MAP.define_key("\C-c\C-xv", :draft_pgp_sign_command)
     MAIL_MODE_MAP.define_key("\C-c\C-xe", :draft_pgp_encrypt_command)
+    MAIL_MODE_MAP.define_key("\C-c\t", :insert_signature_command)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
@@ -179,6 +180,10 @@ module Mournmail
         end_of_header
         @buffer.insert("PGP-Encrypt: yes\n")
       end
+    end
+
+    define_local_command(:insert_signature, doc: "Insert signature.") do
+      @buffer.insert(CONFIG[:signature])
     end
 
     private
