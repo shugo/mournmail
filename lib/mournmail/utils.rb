@@ -82,7 +82,7 @@ module Mournmail
         if skip_if_busy
           return
         else
-          raise EditorError, "Another backgrond thread is running"
+          raise EditorError, "Another background thread is running"
         end
       end
       self.background_thread = Utils.background {
