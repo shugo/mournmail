@@ -79,7 +79,7 @@ module Mournmail
                         conf[:delivery_method],
                         options)
       bury_buffer(@buffer)
-      background do
+      Mournmail.background do
         begin
           if !attached_messages.empty?
             attached_messages.each do |attached_message|
