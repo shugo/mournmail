@@ -13,7 +13,7 @@ module Mournmail
     # See http://nihongo.jp/support/mail_guide/dev_guide.txt
     MAILTO_REGEXP = URI.regexp("mailto")
     URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
-    MIME_REGEXP = /^\[(([\-0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
+    MIME_REGEXP = /^\[(([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
     URI_OR_MIME_REGEXP = /#{URI_REGEXP}|#{MIME_REGEXP}/
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
@@ -64,7 +64,7 @@ module Mournmail
     def current_part
       @buffer.save_excursion do
         @buffer.beginning_of_line
-        if @buffer.looking_at?(/\[([\-0-9.]+) .*\]/)
+        if @buffer.looking_at?(/\[([0-9.]+) .*\]/)
           index = match_string(1)
           indices = index.split(".").map(&:to_i)
           @buffer[:mournmail_mail].dig_part(*indices)
