@@ -1,4 +1,5 @@
 require "mail"
+require "html2text"
 
 module Mournmail
   module MessageRendering
@@ -27,11 +28,16 @@ module Mournmail
         end
         if multipart?
           parts.each_with_index.map { |part, i|
-            part.render([*indices, i])
+            no_content = sub_type == "alternative" && i > 0
+            part.render([*indices, i], no_content)
           }.join
-        elsif main_type.nil? || (main_type == "text" && sub_type == "plain")
-          s = body.decoded
-          Mournmail.to_utf8(s, charset)
+        elsif main_type.nil? || main_type == "text"
+          s = Mournmail.to_utf8(body.decoded, charset)
+          if sub_type == "html"
+            "[-1 text/html]\n" + Html2Text.convert(s)
+          else
+            s
+          end
         else
           type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                                :decode) rescue
@@ -79,12 +85,13 @@ module Mournmail
     end
 
     refine ::Mail::Part do
-      def render(indices)
+      def render(indices, no_content = false)
         index = indices.join(".")
         type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                              :decode) rescue
           "broken/type; error=\"#{$!} (#{$!.class})\""
-        "[#{index} #{type}]\n" + render_content(indices)
+        "[#{index} #{type}]\n" +
+          (no_content ? "" : render_content(indices))
       end
 
       def dig_part(i, *rest_indices)
@@ -114,8 +121,12 @@ module Mournmail
         elsif attachment?
           ""
         else
-          if main_type == "text" && sub_type == "plain"
-            decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+          if main_type == "text"
+            if sub_type == "html"
+              Html2Text.convert(decoded).sub(/(?<!\n)\z/, "\n")
+            else
+              decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+            end
           else
             ""
           end
