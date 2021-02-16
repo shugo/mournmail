@@ -34,7 +34,7 @@ module Mournmail
         elsif main_type.nil? || main_type == "text"
           s = Mournmail.to_utf8(body.decoded, charset)
           if sub_type == "html"
-            "[-1 text/html]\n" + Html2Text.convert(s)
+            "[0 text/html]\n" + Html2Text.convert(s)
           else
             s
           end
@@ -42,7 +42,7 @@ module Mournmail
           type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                                :decode) rescue
           "broken/type; error=\"#{$!} (#{$!.class})\""
-          "[-1 #{type}]\n"
+          "[0 #{type}]\n"
         end + pgp_signature
       end
 
@@ -51,10 +51,10 @@ module Mournmail
           mail = decrypt(verify: true)
           return mail.dig_part(i, *rest_indices)
         end
-        if i == -1
+        if i == 0
           return self
         end
-        part = parts[i]
+        part = parts[i - 1]
         if rest_indices.empty?
           part
         else
@@ -86,7 +86,7 @@ module Mournmail
 
     refine ::Mail::Part do
       def render(indices, no_content = false)
-        index = indices.join(".")
+        index = indices.map { |i| i + 1 }.join(".")
         type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                              :decode) rescue
           "broken/type; error=\"#{$!} (#{$!.class})\""
