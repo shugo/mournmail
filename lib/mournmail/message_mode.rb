@@ -130,8 +130,12 @@ module Mournmail
       else
         file_name = "mournmail"
       end
-      f = Tempfile.open(file_name)
-      f.write(part.decoded)
+      f = Tempfile.open(file_name, binmode: true)
+      s = part.decoded
+      if part.charset
+        s = s.encode(part.charset)
+      end
+      f.write(s)
       f.close
       if ext == "txt"
         find_file(f.path)
