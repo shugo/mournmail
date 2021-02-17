@@ -99,7 +99,7 @@ module Mournmail
           mail = Mail.new(body.to_s)
           mail.dig_part(i, *rest_indices)
         else
-          part = parts[i]
+          part = parts[i - 1]
           if rest_indices.empty?
             part
           else
@@ -113,7 +113,8 @@ module Mournmail
       def render_content(indices)
         if multipart?
           parts.each_with_index.map { |part, i|
-            part.render([*indices, i])
+            no_content = sub_type == "alternative" && i > 0
+            part.render([*indices, i], no_content)
           }.join
         elsif main_type == "message" && sub_type == "rfc822"
           mail = Mail.new(body.raw_source)
