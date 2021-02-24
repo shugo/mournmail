@@ -137,7 +137,7 @@ module Mournmail
       end
       f.write(s)
       f.close
-      if ext == "txt"
+      if part.main_type == "text" && part.sub_type != "html"
         find_file(f.path)
       else
         background do
