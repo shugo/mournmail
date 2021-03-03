@@ -132,7 +132,9 @@ module Mournmail
       end
       f = Tempfile.open(file_name, binmode: true)
       s = part.decoded
-      if part.charset
+      if part.content_type == "text/html"
+        s = s.sub(/<meta http-equiv="content-type".*?>/i, "")
+      elsif part.charset
         s = s.encode(part.charset)
       end
       f.write(s)
