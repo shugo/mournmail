@@ -91,7 +91,7 @@ module Mournmail
                                              :decode) rescue
           "broken/type; error=\"#{$!} (#{$!.class})\""
         "[#{index} #{type}]\n" +
-          (no_content ? "" : render_content(indices))
+          render_content(indices, no_content)
       end
 
       def dig_part(i, *rest_indices)
@@ -110,26 +110,29 @@ module Mournmail
 
       private
 
-      def render_content(indices)
+      def render_content(indices, no_content)
         if multipart?
           parts.each_with_index.map { |part, i|
-            no_content = sub_type == "alternative" && i > 0
-            part.render([*indices, i], no_content)
+            part.render([*indices, i],
+                        no_content || sub_type == "alternative" && i > 0)
           }.join
-        elsif main_type == "message" && sub_type == "rfc822"
-          mail = Mail.new(body.raw_source)
-          mail.render(indices)
-        elsif attachment?
-          ""
         else
-          if main_type == "text"
-            if sub_type == "html"
-              Html2Text.convert(decoded).sub(/(?<!\n)\z/, "\n")
-            else
-              decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
-            end
-          else
+          return "" if no_content
+          if main_type == "message" && sub_type == "rfc822"
+            mail = Mail.new(body.raw_source)
+            mail.render(indices)
+          elsif attachment?
             ""
+          else
+            if main_type == "text"
+              if sub_type == "html"
+                Html2Text.convert(decoded).sub(/(?<!\n)\z/, "\n")
+              else
+                decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+              end
+            else
+              ""
+            end
           end
         end
       rescue => e
