@@ -76,8 +76,8 @@ module Mournmail
 
     def part_file_name(part)
       file_name =
-        part["content-disposition"]&.parameters&.[]("filename") ||
-        part["content-type"]&.parameters&.[]("name") ||
+        (part["content-disposition"]&.parameters&.[]("filename") rescue nil) ||
+        (part["content-type"]&.parameters&.[]("name") rescue nil) ||
         part_default_file_name(part)
       decoded_file_name = Mail::Encodings.decode_encode(file_name, :decode)
       if /\A([A-Za-z0-9_\-]+)'(?:[A-Za-z0-9_\-])*'(.*)/ =~ decoded_file_name
