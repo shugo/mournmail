@@ -54,7 +54,7 @@ CONFIG[:mournmail_accounts] = {
       password: File.read(File.expand_path("~/.textbringer/gmail_passwd")).chomp,
       ssl: true
     },
-    spam_mailbox: "迷惑メール",
+    spam_mailbox: "[Gmail]/迷惑メール",
     archive_mailbox_format: false
   },
 }
