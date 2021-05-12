@@ -52,6 +52,9 @@ module Mournmail
 
     define_local_command(:message_next_link_or_part,
                          doc: "Go to the next link or MIME part.") do
+      if @buffer.looking_at?(URI_OR_MIME_REGEXP)
+        @buffer.forward_char
+      end
       if @buffer.re_search_forward(URI_OR_MIME_REGEXP, raise_error: false)
         goto_char(@buffer.match_beginning(0))
       else
