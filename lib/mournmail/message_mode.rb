@@ -12,7 +12,7 @@ module Mournmail
 
     # See http://nihongo.jp/support/mail_guide/dev_guide.txt
     MAILTO_REGEXP = URI.regexp("mailto")
-    URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
+    URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^\] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
     MIME_REGEXP = /^\[(([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
     URI_OR_MIME_REGEXP = /#{URI_REGEXP}|#{MIME_REGEXP}/
 
