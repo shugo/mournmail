@@ -25,6 +25,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("*t", :summary_mark_unflagged_command)
     SUMMARY_MODE_MAP.define_key("y", :summary_archive_command)
     SUMMARY_MODE_MAP.define_key("o", :summary_refile_command)
+    SUMMARY_MODE_MAP.define_key("!", :summary_refile_spam_command)
     SUMMARY_MODE_MAP.define_key("p", :summary_prefetch_command)
     SUMMARY_MODE_MAP.define_key("X", :summary_expunge_command)
     SUMMARY_MODE_MAP.define_key("v", :summary_view_source_command)
@@ -371,6 +372,15 @@ module Mournmail
           delete_from_summary(summary, uids, "Refiled messages")
         end
       end
+    end
+
+    define_local_command(:summary_refile_spam,
+                         doc: "Refile marked mails as spam.") do
+      mailbox = Mournmail.account_config[:spam_mailbox]
+      if mailbox.nil?
+        raise EditorError, "spam_mailbox is not specified"
+      end
+      summary_refile(Net::IMAP.encode_utf7(mailbox))
     end
 
     define_local_command(:summary_prefetch,
