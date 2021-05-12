@@ -11,6 +11,14 @@ define_command(:mournmail_visit_mailbox, doc: "Visit mailbox") do
   end
 end
 
+define_command(:mournmail_visit_spam_mailbox, doc: "Visit spam mailbox") do
+  mailbox = Mournmail.account_config[:spam_mailbox]
+  if mailbox.nil?
+    raise EditorError, "spam_mailbox is not specified"
+  end
+  mournmail_visit_mailbox(Net::IMAP.encode_utf7(mailbox))
+end
+
 define_command(:mournmail_summary_sync, doc: "Sync summary.") do
   |mailbox = (Mournmail.current_mailbox || "INBOX"),
     all = current_prefix_arg|

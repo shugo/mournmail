@@ -34,6 +34,7 @@ module Mournmail
     SUMMARY_MODE_MAP.define_key("k", :previous_line)
     SUMMARY_MODE_MAP.define_key("j", :next_line)
     SUMMARY_MODE_MAP.define_key("m", :mournmail_visit_mailbox)
+    SUMMARY_MODE_MAP.define_key("S", :mournmail_visit_spam_mailbox)
     SUMMARY_MODE_MAP.define_key("/", :summary_search_command)
     SUMMARY_MODE_MAP.define_key("t", :summary_show_thread_command)
     SUMMARY_MODE_MAP.define_key("@", :summary_change_account_command)
