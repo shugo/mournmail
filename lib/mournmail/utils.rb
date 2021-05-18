@@ -225,15 +225,16 @@ module Mournmail
     end
   end
 
-  def self.google_access_token
-    auth_path = File.expand_path("cache/#{current_account}/google_auth.json",
+  def self.google_access_token(account = current_account)
+    auth_path = File.expand_path("cache/#{account}/google_auth.json",
                                  CONFIG[:mournmail_directory])
     FileUtils.mkdir_p(File.dirname(auth_path))
     store = Google::APIClient::FileStore.new(auth_path)
     storage = Google::APIClient::Storage.new(store)
     storage.authorize
     if storage.authorization.nil?
-      path = File.expand_path(account_config[:client_secret_path])
+      conf = CONFIG[:mournmail_accounts][account]
+      path = File.expand_path(conf[:client_secret_path])
       client_secrets = Google::APIClient::ClientSecrets.load(path)
       auth_client = client_secrets.to_authorization
       auth_client.update!(

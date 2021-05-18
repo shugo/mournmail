@@ -68,12 +68,15 @@ module Mournmail
                    content: File.read(file),
                    encoding: "binary")
       end
-      conf = Mournmail.account_config
+      account = @buffer[:mournmail_delivery_account] ||
+        Mournmail.current_account
+      conf = CONFIG[:mournmail_accounts][account]
       options = @buffer[:mournmail_delivery_options] ||
         conf[:delivery_options]
       if options[:authentication] == "gmail"
+        token = Mournmail.google_access_token(account)
         options = options.merge(authentication: "xoauth2",
-                                password: Mournmail.google_access_token)
+                                password: token)
       end
       m.delivery_method(@buffer[:mournmail_delivery_method] ||
                         conf[:delivery_method],
