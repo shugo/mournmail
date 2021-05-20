@@ -139,6 +139,7 @@ module Mournmail
         On #{mail['date']}
         #{mail['from']} wrote:
       EOF
+          Mournmail.insert_signature
           exchange_point_and_mark
           run_hooks(:mournmail_draft_setup_hook)
         end
@@ -463,7 +464,7 @@ module Mournmail
 
     define_local_command(:summary_change_account,
                          doc: "Change the current account.") do
-      |account = read_account_name("Change account: ")|
+      |account = Mournmail.read_account_name("Change account: ")|
       unless CONFIG[:mournmail_accounts].key?(account)
         raise EditorError, "No such account: #{account}"
       end
@@ -662,13 +663,6 @@ module Mournmail
         raise EditorError, "No message found"
       end
       message
-    end
-
-    def read_account_name(prompt, **opts)
-      f = ->(s) {
-        complete_for_minibuffer(s, CONFIG[:mournmail_accounts].keys)
-      }
-      read_from_minibuffer(prompt, completion_proc: f, **opts)
     end
 
     def delete_from_summary(summary, uids, msg)

@@ -33,7 +33,11 @@ CONFIG[:mournmail_accounts] = {
     },
     spam_mailbox: "spam",
     outbox_mailbox: "outbox",
-    archive_mailbox_format: "archive/%Y"
+    archive_mailbox_format: "archive/%Y",
+    signature: <<~EOF
+      -- 
+      Shugo Maeda <shugo@example.com>
+    EOF
   },
   "gmail.com" => {
     from: "Example <example@gmail.com>",

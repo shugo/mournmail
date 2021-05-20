@@ -8,6 +8,7 @@ module Mournmail
     MAIL_MODE_MAP.define_key("\C-c\C-xv", :draft_pgp_sign_command)
     MAIL_MODE_MAP.define_key("\C-c\C-xe", :draft_pgp_encrypt_command)
     MAIL_MODE_MAP.define_key("\C-c\t", :insert_signature_command)
+    MAIL_MODE_MAP.define_key("\C-c@", :draft_change_account_command)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
@@ -187,6 +188,23 @@ module Mournmail
 
     define_local_command(:insert_signature, doc: "Insert signature.") do
       @buffer.insert(CONFIG[:signature])
+    end
+
+    define_local_command(:draft_change_account, doc: "Change account.") do
+      |account = Mournmail.read_account_name("Change account: ")|
+      from = CONFIG[:mournmail_accounts][account][:from]
+      @buffer[:mournmail_delivery_account] = account
+      @buffer.save_excursion do
+        @buffer.beginning_of_buffer
+        @buffer.re_search_forward(/^From:.*/)
+        @buffer.replace_match("From: " + from)
+        @buffer.end_of_buffer
+        if @buffer.re_search_backward(CONFIG[:mournmail_signature_regexp],
+                                      raise_error: false)
+          @buffer.delete_region(@buffer.point, @buffer.point_max)
+        end
+        Mournmail.insert_signature
+      end
     end
 
     private

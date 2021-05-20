@@ -28,4 +28,5 @@ module Textbringer
     CONFIG[:mournmail_link_open_comamnd] = "xdg-open"
   end
   CONFIG[:mournmail_addresses_path] = File.expand_path("~/.addresses")
+  CONFIG[:mournmail_signature_regexp] = /^\n-- /
 end

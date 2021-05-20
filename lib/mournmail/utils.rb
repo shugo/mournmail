@@ -555,4 +555,24 @@ module Mournmail
   def self.parse_mail(s)
     Mail.new(s.scrub("??"))
   end
+
+  def self.read_account_name(prompt, **opts)
+    f = ->(s) {
+      complete_for_minibuffer(s, CONFIG[:mournmail_accounts].keys)
+    }
+    read_from_minibuffer(prompt, completion_proc: f, **opts)
+  end
+
+  def self.insert_signature
+    account = Buffer.current[:mournmail_delivery_account] ||
+      Mournmail.current_account
+    signature = CONFIG[:mournmail_accounts][account][:signature]
+    if signature
+      Buffer.current.save_excursion do
+        end_of_buffer
+        insert("\n")
+        insert(signature)
+      end
+    end
+  end
 end

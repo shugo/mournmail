@@ -69,9 +69,10 @@ define_command(:mail, doc: "Write a new mail.") do
     User-Agent: Mournmail/#{Mournmail::VERSION} Textbringer/#{Textbringer::VERSION} Ruby/#{RUBY_VERSION}
     --text follows this line--
   EOF
-  re_search_backward(/^To:/)
-  end_of_line
+  beginning_of_buffer
+  re_search_forward(/^To: */)
   if run_hooks
+    Mournmail.insert_signature
     run_hooks(:mournmail_draft_setup_hook)
   end
 end
