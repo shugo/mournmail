@@ -388,6 +388,10 @@ module Mournmail
                          doc: "Prefetch mails.") do
       summary = Mournmail.current_summary
       mailbox = Mournmail.current_mailbox
+      spam_mailbox = Mournmail.account_config[:spam_mailbox]
+      if mailbox == Net::IMAP.encode_utf7(spam_mailbox)
+        raise EditorError, "Can't prefetch spam"
+      end
       target_uids = @buffer.to_s.scan(/^ *\d+/).map { |s|
         s.to_i
       }.select { |uid|
@@ -405,9 +409,7 @@ module Mournmail
                 s = i.attr["BODY[]"]
                 if s
                   cache_id = Mournmail.write_mail_cache(s)
-                  if mailbox != Mournmail.account_config[:spam_mailbox]
-                    Mournmail.index_mail(cache_id, Mail.new(s))
-                  end
+                  Mournmail.index_mail(cache_id, Mail.new(s))
                   summary[uid].cache_id = cache_id
                 end
               end
