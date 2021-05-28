@@ -14,6 +14,13 @@ module Textbringer
     "X-Mailer",
     "Content-Type"
   ]
+  CONFIG[:mournmail_quote_header_fields] = [
+    "Subject",
+    "Date",
+    "From",
+    "To",
+    "Cc"
+  ]
   CONFIG[:mournmail_imap_connect_timeout] = 10
   CONFIG[:mournmail_keep_alive_interval] = 60
   case RUBY_PLATFORM

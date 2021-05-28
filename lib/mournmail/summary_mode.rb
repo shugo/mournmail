@@ -100,7 +100,7 @@ module Mournmail
       |reply_all = current_prefix_arg|
       Mournmail.background do
         mail = read_current_mail[0]
-        body = mail.render_body
+        body = mail.render_text
         foreground do
           Window.current = Mournmail.message_window
           Commands.mail(run_hooks: false)

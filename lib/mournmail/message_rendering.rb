@@ -8,8 +8,8 @@ module Mournmail
         render_header + "\n" + render_body(indices)
       end
 
-      def render_header
-        CONFIG[:mournmail_display_header_fields].map { |name|
+      def render_header(fields = CONFIG[:mournmail_display_header_fields])
+        fields.map { |name|
           val = self[name]&.to_s&.gsub(/\t/, " ")
           val ? "#{name}: #{val}\n" : ""
         }.join
@@ -41,9 +41,34 @@ module Mournmail
         else
           type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                                :decode) rescue
-          "broken/type; error=\"#{$!} (#{$!.class})\""
+            "broken/type; error=\"#{$!} (#{$!.class})\""
           "[0 #{type}]\n"
         end + pgp_signature
+      end
+
+      def render_text(indices = [])
+        if HAVE_MAIL_GPG && encrypted?
+          mail = decrypt(verify: true)
+          return mail.render_text(indices)
+        end
+        if multipart?
+          parts.each_with_index.map { |part, i|
+            if sub_type == "alternative" && i > 0
+              ""
+            else
+              part.render_text([*indices, i])
+            end
+          }.join("\n")
+        elsif main_type.nil? || main_type == "text"
+          s = Mournmail.to_utf8(body.decoded, charset)
+          if sub_type == "html"
+            Html2Text.convert(s)
+          else
+            s
+          end
+        else
+          ""
+        end
       end
 
       def dig_part(i, *rest_indices)
@@ -92,6 +117,38 @@ module Mournmail
           "broken/type; error=\"#{$!} (#{$!.class})\""
         "[#{index} #{type}]\n" +
           render_content(indices, no_content)
+      end
+
+      def render_text(indices)
+        if multipart?
+          parts.each_with_index.map { |part, i|
+            if sub_type == "alternative" && i > 0
+              ""
+            else
+              part.render_text([*indices, i])
+            end
+          }.join("\n")
+        else
+          if main_type == "message" && sub_type == "rfc822"
+            mail = Mail.new(body.raw_source)
+            mail.render_header(CONFIG[:mournmail_quote_header_fields]) +
+              "\n" + mail.render_text(indices)
+          elsif attachment?
+            ""
+          else
+            if main_type == "text"
+              if sub_type == "html"
+                Html2Text.convert(decoded).sub(/(?<!\n)\z/, "\n")
+              else
+                decoded.sub(/(?<!\n)\z/, "\n").gsub(/\r\n/, "\n")
+              end
+            else
+              ""
+            end
+          end
+        end
+      rescue => e
+        ""
       end
 
       def dig_part(i, *rest_indices)
