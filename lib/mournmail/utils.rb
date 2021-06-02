@@ -383,7 +383,8 @@ module Mournmail
     dir = File.dirname(path)
     base = File.basename(path)
     begin
-      f = Tempfile.create(["#{base}-", ".tmp"], dir)
+      f = Tempfile.create(["#{base}-", ".tmp"], dir,
+                          external_encoding: "ASCII-8BIT", binmode: true)
       begin
         f.write(s)
       ensure
