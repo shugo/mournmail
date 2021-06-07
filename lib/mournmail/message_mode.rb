@@ -24,6 +24,7 @@ module Mournmail
     def initialize(buffer)
       super(buffer)
       buffer.keymap = MESSAGE_MODE_MAP
+      @attached_file = nil
     end
 
     define_local_command(:message_open_link_or_part,
@@ -133,20 +134,20 @@ module Mournmail
       else
         file_name = "mournmail"
       end
-      f = Tempfile.open(file_name, binmode: true)
+      @attached_file = Tempfile.open(file_name, binmode: true)
       s = part.decoded
       if part.content_type == "text/html"
         s = s.sub(/<meta http-equiv="content-type".*?>/i, "")
       elsif part.charset
         s = s.encode(part.charset)
       end
-      f.write(s)
-      f.close
+      @attached_file.write(s)
+      @attached_file.close
       if part.main_type == "text" && part.sub_type != "html"
-        find_file(f.path)
+        find_file(@attached_file.path)
       else
         background do
-          system(*CONFIG[:mournmail_file_open_comamnd], f.path,
+          system(*CONFIG[:mournmail_file_open_comamnd], @attached_file.path,
                  out: File::NULL, err: File::NULL)
         end
       end
