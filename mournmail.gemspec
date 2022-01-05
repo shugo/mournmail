@@ -22,6 +22,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency "textbringer"
+  spec.add_runtime_dependency "net-smtp"
+  spec.add_runtime_dependency "net-imap"
   spec.add_runtime_dependency "mail"
   spec.add_runtime_dependency "mime-types"
   spec.add_runtime_dependency "rroonga"
