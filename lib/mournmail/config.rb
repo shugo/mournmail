@@ -36,4 +36,18 @@ module Textbringer
   end
   CONFIG[:mournmail_addresses_path] = File.expand_path("~/.addresses")
   CONFIG[:mournmail_signature_regexp] = /^\n-- /
+  CONFIG[:mournmail_allowed_attachment_extensions] = [
+    "htm",
+    "html",
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt"
+  ]
 end
