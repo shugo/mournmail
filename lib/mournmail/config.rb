@@ -48,6 +48,7 @@ module Textbringer
     "docx",
     "xls",
     "xlsx",
-    "ppt"
+    "ppt",
+    "zip"
   ]
 end
