@@ -11,6 +11,7 @@ require 'google/api_client/client_secrets'
 require 'google/api_client/auth/storage'
 require 'google/api_client/auth/storages/file_store'
 require 'launchy'
+require "socket"
 
 class Net::SMTP
   def auth_xoauth2(user, secret)
@@ -225,6 +226,48 @@ module Mournmail
     end
   end
 
+  class GoogleAuthCallbackServer
+    def initialize
+      @servers = Socket.tcp_server_sockets("127.0.0.1", 0)
+      @queue = Queue.new
+    end
+
+    def port
+      @servers.first.local_address.ip_port
+    end
+
+    def start
+      Socket.accept_loop(@servers) do |sock, addr|
+        line = sock.gets
+        query_string = line.slice(%r'\AGET [^?]*\?(.*) HTTP/1.1\r\n', 1)
+        params = CGI.parse(query_string)
+        code = params["code"][0]
+        while line = sock.gets
+          break if line == "\r\n"
+        end
+        sock.print("HTTP/1.1 200 OK\r\n")
+        sock.print("Content-Type: text/plain\r\n")
+        sock.print("\r\n")
+        sock.print("Authenticated!")
+      ensure
+        sock.close
+        if code
+          @queue.push(code)
+        end
+      end
+    end
+
+    def stop
+      @servers.each do |server|
+        server.close
+      end
+    end
+
+    def code
+      @queue.pop
+    end
+  end
+
   def self.google_access_token(account = current_account)
     auth_path = File.expand_path("cache/#{account}/google_auth.json",
                                  CONFIG[:mournmail_directory])
@@ -236,28 +279,28 @@ module Mournmail
       conf = CONFIG[:mournmail_accounts][account]
       path = File.expand_path(conf[:client_secret_path])
       client_secrets = Google::APIClient::ClientSecrets.load(path)
+      callback_server = GoogleAuthCallbackServer.new
       auth_client = client_secrets.to_authorization
       auth_client.update!(
         :scope => 'https://mail.google.com/',
-        :redirect_uri => 'urn:ietf:wg:oauth:2.0:oob'
+        :redirect_uri => "http://127.0.0.1:#{callback_server.port}/"
       )
-      auth_uri = auth_client.authorization_uri.to_s
-      auth_client.code = foreground! {
-        begin
-          Launchy.open(auth_uri)
-        rescue Launchy::CommandNotFoundError
-          buffer = show_google_auth_uri(auth_uri)
-        end
-        begin
-          Window.echo_area.clear_message
-          Window.redisplay
-          read_from_minibuffer("Code: ").chomp
-        ensure
-          if buffer
-            kill_buffer(buffer, force: true)
+      Thread.start do
+        callback_server.start
+      end
+      begin
+        auth_uri = auth_client.authorization_uri.to_s
+        foreground! do
+          begin
+            Launchy.open(auth_uri)
+          rescue Launchy::CommandNotFoundError
+            show_google_auth_uri(auth_uri)
           end
         end
-      }
+        auth_client.code = callback_server.code
+      ensure
+        callback_server.stop
+      end
       auth_client.fetch_access_token!
       old_umask = File.umask(077)
       begin
