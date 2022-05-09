@@ -229,14 +229,13 @@ module Mournmail
   class GoogleAuthCallbackServer
     def initialize
       @servers = Socket.tcp_server_sockets("127.0.0.1", 0)
-      @queue = Queue.new
     end
 
     def port
       @servers.first.local_address.ip_port
     end
 
-    def start
+    def receive_code
       Socket.accept_loop(@servers) do |sock, addr|
         line = sock.gets
         query_string = line.slice(%r'\AGET [^?]*\?(.*) HTTP/1.1\r\n', 1)
@@ -248,23 +247,17 @@ module Mournmail
         sock.print("HTTP/1.1 200 OK\r\n")
         sock.print("Content-Type: text/plain\r\n")
         sock.print("\r\n")
-        sock.print("Authenticated!")
+        if code
+          sock.print("Authenticated!")
+        else
+          sock.print("Authentication failed!")
+        end
+        return code
       ensure
         sock.close
-        if code
-          @queue.push(code)
-        end
       end
-    end
-
-    def stop
-      @servers.each do |server|
-        server.close
-      end
-    end
-
-    def code
-      @queue.pop
+    ensure
+      @servers.each(&:close)
     end
   end
 
@@ -285,22 +278,15 @@ module Mournmail
         :scope => 'https://mail.google.com/',
         :redirect_uri => "http://127.0.0.1:#{callback_server.port}/"
       )
-      Thread.start do
-        callback_server.start
-      end
-      begin
-        auth_uri = auth_client.authorization_uri.to_s
-        foreground! do
-          begin
-            Launchy.open(auth_uri)
-          rescue Launchy::CommandNotFoundError
-            show_google_auth_uri(auth_uri)
-          end
+      auth_uri = auth_client.authorization_uri.to_s
+      foreground! do
+        begin
+          Launchy.open(auth_uri)
+        rescue Launchy::CommandNotFoundError
+          show_google_auth_uri(auth_uri)
         end
-        auth_client.code = callback_server.code
-      ensure
-        callback_server.stop
       end
+      auth_client.code = callback_server.receive_code
       auth_client.fetch_access_token!
       old_umask = File.umask(077)
       begin
