@@ -38,6 +38,7 @@ module Textbringer
   CONFIG[:mournmail_signature_regexp] = /^\n-- /
   CONFIG[:mournmail_allowed_attachment_extensions] = [
     "txt",
+    "md",
     "htm",
     "html",
     "pdf",
