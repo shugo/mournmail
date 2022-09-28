@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "mail"
   spec.add_runtime_dependency "mime-types"
   spec.add_runtime_dependency "rroonga"
-  spec.add_runtime_dependency "google-api-client"
+  spec.add_runtime_dependency "google-apis-core"
   spec.add_runtime_dependency "launchy"
   spec.add_runtime_dependency "html2text"
 
