@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "textbringer"
   spec.add_runtime_dependency "net-smtp"
-  spec.add_runtime_dependency "net-imap"
+  spec.add_runtime_dependency "net-imap", ">= 0.3.1"
   spec.add_runtime_dependency "mail"
   spec.add_runtime_dependency "mime-types"
   spec.add_runtime_dependency "rroonga"

@@ -17,27 +17,13 @@ class Net::SMTP
   def auth_xoauth2(user, secret)
     check_auth_args user, secret
     res = critical {
-      s = Mournmail.xoauth2_string(user, secret)
+      s = Net::IMAP::XOauth2Authenticator.new(user, secret).process("")
       get_response('AUTH XOAUTH2 ' + base64_encode(s))
     }
     check_auth_response res
     res
   end
 end
-
-class Net::IMAP::Xoauth2Authenticator
-  def process(data)
-    Mournmail.xoauth2_string(@user, @access_token)
-  end
-
-  private
-
-  def initialize(user, access_token)
-    @user = user
-    @access_token = access_token
-  end
-end
-Net::IMAP.add_authenticator("XOAUTH2", Net::IMAP::Xoauth2Authenticator)
 
 module Mournmail
   begin
@@ -317,10 +303,6 @@ module Mournmail
     buffer
   end
   
-  def self.xoauth2_string(user, access_token)
-    "user=#{user}\1auth=Bearer #{access_token}\1\1"
-  end
-
   def self.fetch_summary(mailbox, all: false)
     if all
       summary = Mournmail::Summary.new(mailbox)
