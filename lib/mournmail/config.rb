@@ -9,6 +9,7 @@ module Textbringer
     "From",
     "To",
     "Cc",
+    "Bcc",
     "Reply-To",
     "User-Agent",
     "X-Mailer",
