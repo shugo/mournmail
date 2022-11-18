@@ -94,7 +94,7 @@ Type `M-x mournmail` to visit INBOX.
 |* u |summary_mark_unread_command |Mark unread mails |
 |* s |summary_mark_flagged_command |Mark flagged mails |
 |* t |summary_mark_unflagged_command |Mark unflagged mails |
-|y   |summary_archive_command |Archive mails
+|y   |summary_archive_command |Archive mails. Archived mails will be deleted or refiled from the server, and only shown by summary_search_command |
 |o   |summary_refile_command |Refile marked mails |
 |!   |summary_refile_spam_command |Refile marked mails as spam |
 |p   |summary_prefetch_command |Prefetch mails |
