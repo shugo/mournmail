@@ -142,7 +142,8 @@ module Mournmail
             s = data[0].attr["BODY[]"]
             mail = Mournmail.parse_mail(s)
             spam_mailbox = Mournmail.account_config[:spam_mailbox]
-            if @mailbox != Net::IMAP.encode_utf7(spam_mailbox)
+            if spam_mailbox.nil? || 
+                @mailbox != Net::IMAP.encode_utf7(spam_mailbox)
               item.cache_id = Mournmail.write_mail_cache(s)
               Mournmail.index_mail(item.cache_id, mail)
             end
