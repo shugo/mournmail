@@ -70,6 +70,67 @@ Type `M-x mail` to send a mail.
 
 Type `M-x mournmail` to visit INBOX.
 
+## Key bindings
+
+### Summary
+
+|Key |Command |Description |
+|---|---|---|
+|s   |mournmail_summary_sync |Sync summary. With C-u sync all mails |
+|SPC |summary_read_command |Read a mail |
+|C-h |summary_scroll_down_command |Scroll down the current message |
+|n   |summary_next_command |Display the next mail |
+|w   |summary_write_command |Write a new mail |
+|a   |summary_reply_command |Reply to the current message |
+|A   |summary_reply_command |Reply to the current message |
+|f   |summary_forward_command |Forward the current message |
+|u   |summary_toggle_seen_command |Toggle Seen |
+|$   |summary_toggle_flagged_command |Toggle Flagged |
+|d   |summary_toggle_deleted_command |Toggle Deleted |
+|x   |summary_toggle_mark_command |Toggle mark |
+|* a |summary_mark_all_command |Mark all mails |
+|* n |summary_unmark_all_command |Unmark all mails |
+|* r |summary_mark_read_command |Mark read mails |
+|* u |summary_mark_unread_command |Mark unread mails |
+|* s |summary_mark_flagged_command |Mark flagged mails |
+|* t |summary_mark_unflagged_command |Mark unflagged mails |
+|y   |summary_archive_command |Archive mails
+|o   |summary_refile_command |Refile marked mails |
+|!   |summary_refile_spam_command |Refile marked mails as spam |
+|p   |summary_prefetch_command |Prefetch mails |
+|X   |summary_expunge_command |Expunge deleted mails |
+|v   |summary_view_source_command |View source of a mail |
+|M   |summary_merge_partial_command |Merge marked message/partial |
+|q   |mournmail_quit |Quit Mournmail |
+|k   |previous_line |Move up |
+|j   |next_line |Move down |
+|m   |mournmail_visit_mailbox |Visit mailbox |
+|S   |mournmail_visit_spam_mailbox |Visit spam mailbox |
+|/   |summary_search_command |Search mails |
+|t   |summary_show_thread_command |Show the thread of the current mail |
+|@   |summary_change_account_command |Change the current account |
+
+### Message
+
+|Key |Command |Description |
+|---|---|---|
+|RET |message_open_link_or_part_command |Open link or MIME part |
+|s   |message_save_part_command |Save the MIME part |
+|TAB |message_next_link_or_part_command| Go to the next link or MIME part |
+
+### Draft
+
+|Key |Command |Description |
+|---|---|---|
+|C-c C-c     |draft_send_command |Send a mail |
+|C-c C-k     |draft_kill_command |Kill the draft buffer |
+|C-c C-x TAB |draft_attach_file_command |Attach a file |
+|C-c C-x v   |draft_pgp_sign_command |PGP sign |
+|C-c C-x e   |draft_pgp_encrypt_command |PGP encrypt |
+|C-c TAB     |insert_signature_command |Insert signature |
+|C-c @       |draft_change_account_command |Change account |
+|TAB         |draft_complete_or_insert_tab_command |Complete a mail address or insert a tab |
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
