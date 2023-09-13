@@ -262,6 +262,7 @@ module Mournmail
       width = 0
       str = +""
       s.each_char do |c|
+        next if c == "\n"
         w = Buffer.display_width(c)
         width += w
         if width > n
