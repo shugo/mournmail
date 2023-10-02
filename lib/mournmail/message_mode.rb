@@ -11,10 +11,12 @@ module Mournmail
     MESSAGE_MODE_MAP.define_key("\t", :message_next_link_or_part_command)
 
     # See http://nihongo.jp/support/mail_guide/dev_guide.txt
-    MAILTO_REGEXP = URI.regexp("mailto")
-    URI_REGEXP = /(https?|ftp):\/\/[^ 　\t\n>)"]*[^\] 　\t\n>.,:)"]+|#{MAILTO_REGEXP}/
+    URI_REGEXP = Regexp.union(URI.regexp("http"),
+                              URI.regexp("https"),
+                              URI.regexp("ftp"),
+                              URI.regexp("mailto"))
     MIME_REGEXP = /^\[(([0-9.]+) [A-Za-z._\-]+\/[A-Za-z._\-]+.*|PGP\/MIME .*)\]$/
-    URI_OR_MIME_REGEXP = /#{URI_REGEXP}|#{MIME_REGEXP}/
+    URI_OR_MIME_REGEXP = Regexp.union(URI_REGEXP, MIME_REGEXP)
 
     define_syntax :field_name, /^[A-Za-z\-]+: /
     define_syntax :quotation, /^>.*/
