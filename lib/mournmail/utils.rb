@@ -13,15 +13,28 @@ require 'google/api_client/auth/storages/file_store'
 require 'launchy'
 require "socket"
 
-class Net::SMTP
-  def auth_xoauth2(user, secret)
-    check_auth_args user, secret
-    res = critical {
-      s = Net::IMAP::XOauth2Authenticator.new(user, secret).process("")
-      get_response('AUTH XOAUTH2 ' + base64_encode(s))
-    }
-    check_auth_response res
-    res
+if defined?(Net::SMTP::Authenticator)
+  class Net::SMTP
+    class AuthXOAuth2 < Net::SMTP::Authenticator
+      auth_type :xoauth2
+
+      def auth(user, secret)
+        s = Net::IMAP::XOauth2Authenticator.new(user, secret).process("")
+        finish('AUTH XOAUTH2 ' + base64_encode(s))
+      end
+    end
+  end
+else    
+  class Net::SMTP
+    def auth_xoauth2(user, secret)
+      check_auth_args user, secret
+      res = critical {
+        s = Net::IMAP::XOauth2Authenticator.new(user, secret).process("")
+        get_response('AUTH XOAUTH2 ' + base64_encode(s))
+      }
+      check_auth_response res
+      res
+    end
   end
 end
 
@@ -184,7 +197,7 @@ module Mournmail
         end
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(conf[:imap_host],
-                                conf[:imap_options])
+                                conf[:imap_options].except(:auth_type, :user_name))
           @imap.authenticate(auth_type, conf[:imap_options][:user_name],
                              password)
           @mailboxes = @imap.list("", "*").map { |mbox|
