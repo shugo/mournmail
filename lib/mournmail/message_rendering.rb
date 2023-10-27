@@ -115,6 +115,10 @@ module Mournmail
         type = Mail::Encodings.decode_encode(self["content-type"].to_s,
                                              :decode) rescue
           "broken/type; error=\"#{$!} (#{$!.class})\""
+        filename = self["content-disposition"]&.filename
+        if filename && !self["content-type"]&.filename
+          type += "; filename=#{filename}"
+        end
         "[#{index} #{type}]\n" +
           render_content(indices, no_content)
       end
