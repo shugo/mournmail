@@ -478,6 +478,11 @@ module Mournmail
 
     private
 
+    def get_summary_item(uid)
+      summary = Mournmail.current_summary
+      summary && summary[uid]
+    end
+
     def selected_uid
       uid = @buffer.save_excursion {
         @buffer.beginning_of_line
@@ -538,7 +543,7 @@ module Mournmail
     end
         
     def mark_as_seen(uid, update_server)
-      summary_item = Mournmail.current_summary[uid]
+      summary_item = get_summary_item(uid)
       if summary_item && !summary_item.flags.include?(:Seen)
         summary_item.set_flag(:Seen, update_server: update_server)
         Mournmail.current_summary.save
@@ -547,7 +552,7 @@ module Mournmail
     end
 
     def toggle_flag(uid, flag)
-      summary_item = Mournmail.current_summary[uid]
+      summary_item = get_summary_item(uid)
       if summary_item
         Mournmail.background do
           summary_item.toggle_flag(flag)
@@ -657,7 +662,7 @@ module Mournmail
 
     def current_message
       uid = selected_uid
-      item = Mournmail.current_summary[uid]
+      item = get_summary_item(uid)
       message = Groonga["Messages"][item.cache_id]
       if message.nil?
         raise EditorError, "No message found"
