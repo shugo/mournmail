@@ -1,5 +1,5 @@
 require "mail"
-require "html2text"
+require "nokogiri"
 
 module Mournmail
   module MessageRendering
@@ -34,7 +34,9 @@ module Mournmail
         elsif main_type.nil? || main_type == "text"
           s = Mournmail.to_utf8(body.decoded, charset)
           if sub_type == "html"
-            "[0 text/html]\n" + Html2Text.convert(s)
+            doc = Nokogiri::HTML(s)
+            doc.css("script, style, link").each { |node| node.remove }
+            "[0 text/html]\n" + doc.css("body").text.squeeze(" \n")
           else
             s
           end

@@ -130,7 +130,7 @@ module Mournmail
       if part.multipart?
         raise EditorError, "Can't open a multipart entity."
       end
-      ext = part_file_name(part).slice(/\.([^.]+)\z/, 1)
+      ext = part_file_name(part).slice(/\.([^.]+)\z/, 1).downcase
       if part.main_type != "text" || part.sub_type == "html"
         if ext.nil?
           raise EditorError, "The extension of the filename is not specified"
