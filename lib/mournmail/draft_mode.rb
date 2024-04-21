@@ -21,11 +21,15 @@ module Mournmail
 
     define_local_command(:draft_send,
                          doc: "Send a mail and exit from mail buffer.") do
-      unless y_or_n?("Send this mail?")
-        return
+      s = @buffer.to_s
+      if s.match?(CONFIG[:forgotten_attachment_re]) &&
+          !s.match?(/^Attached-File:/)
+        msg = "It seems like you forgot to attach a file. Send anyway?"
+        return unless yes_or_no?(msg)
+      else
+        return unless y_or_n?("Send this mail?")
       end
       run_hooks(:mournmail_pre_send_hook)
-      s = @buffer.to_s
       charset = CONFIG[:mournmail_charset]
       begin
         s.encode(charset)

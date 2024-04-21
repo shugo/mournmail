@@ -54,4 +54,11 @@ module Textbringer
     "ppt",
     "zip"
   ]
+  CONFIG[:forgotten_attachment_re] = Regexp.union(
+    /I('ve| have) (attached|included)/,
+    /See the (attached|attachment)/,
+    /Attached file/,
+    /添付(する|した|します|しました|いたします|いたしました)/,
+    /ファイルを参照/
+  )
 end
