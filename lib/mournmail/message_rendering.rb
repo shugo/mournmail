@@ -1,5 +1,6 @@
 require "mail"
 require "nokogiri"
+require "html2text"
 
 module Mournmail
   module MessageRendering
