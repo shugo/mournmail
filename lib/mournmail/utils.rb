@@ -197,7 +197,7 @@ module Mournmail
         end
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(conf[:imap_host],
-                                conf[:imap_options].except(:auth_type, :user_name))
+                                conf[:imap_options].except(:auth_type, :user_name, :password))
           @imap.authenticate(auth_type, conf[:imap_options][:user_name],
                              password)
           @mailboxes = @imap.list("", "*").map { |mbox|
