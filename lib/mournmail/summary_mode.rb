@@ -390,7 +390,7 @@ module Mournmail
       summary = Mournmail.current_summary
       mailbox = Mournmail.current_mailbox
       spam_mailbox = Mournmail.account_config[:spam_mailbox]
-      if mailbox == Net::IMAP.encode_utf7(spam_mailbox)
+      if spam_mailbox && mailbox == Net::IMAP.encode_utf7(spam_mailbox)
         raise EditorError, "Can't prefetch spam"
       end
       target_uids = @buffer.to_s.scan(/^ *\d+/).map { |s|
