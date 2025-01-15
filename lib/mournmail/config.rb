@@ -37,6 +37,7 @@ module Textbringer
   end
   CONFIG[:mournmail_addresses_path] = File.expand_path("~/.addresses")
   CONFIG[:mournmail_signature_regexp] = /^-- /
+  CONFIG[:mournmail_summary_lines] = 7
   CONFIG[:mournmail_allowed_attachment_extensions] = [
     "txt",
     "md",

@@ -129,7 +129,8 @@ module Mournmail
   def self.message_window
     if Window.list.size == 1
       split_window
-      shrink_window(Window.current.lines - 8)
+      n = Window.current.lines - (CONFIG[:mournmail_summary_lines] + 1)
+      shrink_window(n)
     end
     windows = Window.list
     i = (windows.index(Window.current) + 1) % windows.size
