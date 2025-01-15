@@ -55,7 +55,7 @@ module Textbringer
     "ppt",
     "zip"
   ]
-  CONFIG[:forgotten_attachment_re] = 
+  CONFIG[:mournmail_forgotten_attachment_re] = 
     Regexp.new(
       "^(?!>).*" +
         Regexp.union(
