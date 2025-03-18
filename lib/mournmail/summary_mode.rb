@@ -599,10 +599,16 @@ module Mournmail
     def show_search_result(messages,
                            query: nil, buffer_name: "*search result*")
       summary_text = messages.map { |m|
-        format("%s [ %s ] %s\n",
-               m.date.strftime("%m/%d %H:%M"),
-               ljust(m.from.to_s.gsub(/\n/, ""), 16),
-               ljust(m.subject.to_s.gsub(/\n/, ""), 45))
+        s = +""
+        s << format("%s [ %s ] ",
+                    m.date.strftime("%m/%d %H:%M"),
+                    ljust(m.from.to_s.gsub(/\n/, ""),
+                          CONFIG[:mournmail_summary_from_limit]))
+        s << ljust(m.subject.to_s.gsub(/\n/, ""),
+                   CONFIG[:mournmail_summary_line_limit] - Buffer.display_width(s))
+        s << "\n"
+        s
+
       }.join
       buffer = Buffer.find_or_new(buffer_name, undo_limit: 0,
                                   read_only: true)

@@ -66,4 +66,7 @@ module Textbringer
           /ファイルを参照/
         ).to_s
     )
+  CONFIG[:mournmail_summary_line_limit] = 78
+  CONFIG[:mournmail_summary_from_limit] = 16
+  CONFIG[:mournmail_summary_use_line_cache] = true
 end

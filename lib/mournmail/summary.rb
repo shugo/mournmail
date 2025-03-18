@@ -213,8 +213,12 @@ module Mournmail
       }
     end
     
-    def to_s(limit = 78, from_limit = 16, level = 0)
-      @line ||= format_line(limit, from_limit, level)
+    def to_s(limit = CONFIG[:mournmail_summary_line_limit],
+             from_limit = CONFIG[:mournmail_summary_from_limit],
+             level = 0)
+      if @line.nil? || !CONFIG[:mournmail_summary_use_line_cache]
+        @line = format_line(limit, from_limit, level)
+      end
       return @line if @replies.empty?
       s = @line.dup
       child_level = level + 1
@@ -247,7 +251,9 @@ module Mournmail
     
     private
 
-    def format_line(limit = 78, from_limit = 16, level = 0)
+    def format_line(limit = CONFIG[:mournmail_summary_line_limit],
+                    from_limit = CONFIG[:mournmail_summary_from_limit],
+                    level = 0)
       space = "  " * (level < 8 ? level : 8)
       s = +""
       s << format("%6d %s%s %s[ %s ] ",
