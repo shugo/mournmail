@@ -1,3 +1,3 @@
 module Mournmail
-  VERSION = "1.0.5"
+  VERSION = "2"
 end
