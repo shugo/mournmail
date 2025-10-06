@@ -69,4 +69,6 @@ module Textbringer
   CONFIG[:mournmail_summary_line_limit] = 78
   CONFIG[:mournmail_summary_from_limit] = 16
   CONFIG[:mournmail_summary_use_line_cache] = true
+  CONFIG[:mournmail_smtp_open_timeout] = 30
+  CONFIG[:mournmail_smtp_read_timeout] = 60
 end
