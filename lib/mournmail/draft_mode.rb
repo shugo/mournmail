@@ -76,16 +76,22 @@ module Mournmail
       account = @buffer[:mournmail_delivery_account] ||
         Mournmail.current_account
       conf = CONFIG[:mournmail_accounts][account]
+      delivery_method = @buffer[:mournmail_delivery_method] ||
+        conf[:delivery_method]
       options = @buffer[:mournmail_delivery_options] ||
         conf[:delivery_options]
+      if delivery_method == :smtp
+        options = {
+          open_timeout: CONFIG[:mournmail_smtp_open_timeout],
+          read_timeout: CONFIG[:mournmail_smtp_read_timeout],
+        }.merge(options)
+      end
       if options[:authentication] == "gmail"
         token = Mournmail.google_access_token(account)
         options = options.merge(authentication: "xoauth2",
                                 password: token)
       end
-      m.delivery_method(@buffer[:mournmail_delivery_method] ||
-                        conf[:delivery_method],
-                        options)
+      m.delivery_method(delivery_method, options)
       bury_buffer(@buffer)
       Mournmail.background do
         begin
