@@ -267,7 +267,12 @@ module Mournmail
     FileUtils.mkdir_p(File.dirname(auth_path))
     store = Google::APIClient::FileStore.new(auth_path)
     storage = Google::APIClient::Storage.new(store)
-    storage.authorize
+    begin
+      storage.authorize
+    rescue Signet::AuthorizationError
+      File.unlink(auth_path)
+      raise
+    end
     if storage.authorization.nil?
       conf = CONFIG[:mournmail_accounts][account]
       path = File.expand_path(conf[:client_secret_path])
