@@ -154,7 +154,7 @@ module Mournmail
         find_file(@attached_file.path)
       else
         background do
-          system(*CONFIG[:mournmail_file_open_comamnd], @attached_file.path,
+          system(*CONFIG[:mournmail_file_open_command], @attached_file.path,
                  out: File::NULL, err: File::NULL)
         end
       end
@@ -176,7 +176,7 @@ module Mournmail
         insert u.to_mailtext.sub(/\n\n\z/, "")
         end_of_buffer
       else
-        system(*CONFIG[:mournmail_link_open_comamnd], uri,
+        system(*CONFIG[:mournmail_link_open_command], uri,
                out: File::NULL, err: File::NULL)
       end
     end
