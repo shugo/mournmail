@@ -176,8 +176,8 @@ module Mournmail
         insert u.to_mailtext.sub(/\n\n\z/, "")
         end_of_buffer
       else
-        system(*CONFIG[:mournmail_link_open_command], uri,
-               out: File::NULL, err: File::NULL)
+        cmd = Mournmail.account_config[:link_open_command] || CONFIG[:mournmail_link_open_command]
+        system(*cmd, uri, out: File::NULL, err: File::NULL)
       end
     end
   end
