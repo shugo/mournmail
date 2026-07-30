@@ -1,11 +1,11 @@
 module Textbringer
-  Face.define :seen, foreground: "blue"
-  Face.define :deleted, foreground: "green"
-  Face.define :answered, foreground: "blue"
+  Face.define :seen, inherit: :comment
+  Face.define :deleted, inherit: :string
+  Face.define :answered, inherit: :number
   Face.define :unseen, bold: true
   Face.define :flagged, foreground: "yellow", bold: true
-  Face.define :field_name, foreground: "magenta", bold: true
-  Face.define :quotation, foreground: "yellow"
-  Face.define :header_end, foreground: "yellow"
-  Face.define :mime_part, foreground: "blue", bold: true
+  Face.define :field_name, inherit: :function_name
+  Face.define :quotation, inherit: :comment
+  Face.define :header_end, inherit: :property
+  Face.define :mime_part, inherit: :link, bold: true, underline: false
 end
