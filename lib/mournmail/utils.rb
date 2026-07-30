@@ -106,7 +106,9 @@ module Mournmail
           background(skip_if_busy: true) do
             begin
               imap_connect do |imap|
-                imap.noop
+                Timeout.timeout(CONFIG[:mournmail_imap_noop_timeout]) do
+                  imap.noop
+                end
               end
             rescue => e
               message("Error in IMAP NOOP: #{e.class}: #{e.message}")
@@ -199,6 +201,7 @@ module Mournmail
         Timeout.timeout(CONFIG[:mournmail_imap_connect_timeout]) do
           @imap = Net::IMAP.new(conf[:imap_host],
                                 conf[:imap_options].except(:auth_type, :user_name, :password))
+          setup_tcp_keep_alive(@imap)
           @imap.authenticate(auth_type, conf[:imap_options][:user_name],
                              password)
           @mailboxes = @imap.list("", "*").map { |mbox|
@@ -211,9 +214,35 @@ module Mournmail
       end
       yield(@imap)
     end
-  rescue IOError, Errno::ECONNRESET
+  rescue IOError, SystemCallError, SocketError, OpenSSL::SSL::SSLError,
+         Timeout::Error, Net::IMAP::ByeResponseError
     imap_disconnect
     raise
+  end
+
+  # Detect dead connections at the kernel level (e.g. after a network
+  # switch, where reads block forever without an error).
+  # Net::IMAP does not expose its socket, so use its internal @sock.
+  def self.setup_tcp_keep_alive(imap)
+    sock = imap.instance_variable_get(:@sock)
+    return if sock.nil?
+    sock = sock.io if sock.respond_to?(:io) # OpenSSL::SSL::SSLSocket
+    sock.setsockopt(:SOCKET, :KEEPALIVE, true)
+    if Socket.const_defined?(:TCP_KEEPIDLE)
+      sock.setsockopt(:TCP, :KEEPIDLE, 60)
+    end
+    if Socket.const_defined?(:TCP_KEEPINTVL)
+      sock.setsockopt(:TCP, :KEEPINTVL, 10)
+    end
+    if Socket.const_defined?(:TCP_KEEPCNT)
+      sock.setsockopt(:TCP, :KEEPCNT, 3)
+    end
+    if Socket.const_defined?(:TCP_USER_TIMEOUT)
+      sock.setsockopt(:TCP, :USER_TIMEOUT, 90_000) # milliseconds
+    end
+  rescue StandardError
+    # Keep alive is best-effort; the NOOP timeout still detects dead
+    # connections without it.
   end
 
   def self.imap_disconnect

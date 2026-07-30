@@ -23,6 +23,7 @@ module Textbringer
     "Cc"
   ]
   CONFIG[:mournmail_imap_connect_timeout] = 10
+  CONFIG[:mournmail_imap_noop_timeout] = 15
   CONFIG[:mournmail_keep_alive_interval] = 60
   case RUBY_PLATFORM
   when /mswin|mingw/
