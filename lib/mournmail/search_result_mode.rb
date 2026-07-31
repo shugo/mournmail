@@ -121,7 +121,7 @@ module Mournmail
       if message.nil?
         raise EditorError, "No message found"
       end
-      [Mail.new(Mournmail.read_mail_cache(message._key)), false]
+      [Mail.new(Mournmail.read_mail_cache(message._key)), false, nil]
     end
 
     def next_message

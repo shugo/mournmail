@@ -42,6 +42,10 @@ module Mournmail
     define_local_command(:message_save_part, doc: "Save the current part.") do
       part = current_part
       return if part.nil?
+      virus = @buffer[:mournmail_virus]
+      if virus
+        return unless yes_or_no?("Virus detected (#{virus}); really save?")
+      end
       default_path = File.expand_path(part_file_name(part),
                                       CONFIG[:mournmail_save_directory])
       path = read_file_name("Save: ", default: default_path)
@@ -124,6 +128,10 @@ module Mournmail
     end
 
     def open_part(part)
+      virus = @buffer[:mournmail_virus]
+      if virus
+        return unless yes_or_no?("Virus detected (#{virus}); really open?")
+      end
       if part.multipart?
         raise EditorError, "Can't open a multipart entity."
       end
