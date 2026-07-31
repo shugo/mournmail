@@ -64,6 +64,43 @@ CONFIG[:mournmail_accounts] = {
 }
 ```
 
+## Virus scanning
+
+An external virus scanner can be plugged in with
+`:mournmail_virus_scan_hook`.  The hook is called with the raw message
+(String) fetched from the IMAP server, and should raise
+`Mournmail::VirusDetected` with the virus name if a virus is detected.
+
+```ruby
+add_hook(:mournmail_virus_scan_hook) do |data|
+  IO.popen(["clamdscan", "--no-summary", "-"], "r+b") do |io|
+    io.write(data)
+    io.close_write
+    out = io.read
+    if /: (.+) FOUND$/ =~ out
+      raise Mournmail::VirusDetected, $1
+    end
+  end
+end
+```
+
+When a virus is detected:
+
+* A warning is shown in the echo area and `*Messages*`.
+* The message is not written to the cache directory, and not indexed for
+  full text search.  The message itself can still be read; it's fetched
+  from the server again (and scanned again) every time it's opened.
+* `message_save_part_command` and `message_open_link_or_part_command` ask
+  for confirmation before saving or opening the part.
+
+If the hook raises any other exception (e.g. clamd is not running, or
+`clamdscan` exits with the status 2 without printing anything), the
+message is treated as unscanned: a warning is shown, and the message is
+cached as usual.
+
+The hook is called in a background thread, so it must not touch buffers
+directly.
+
 ## Usage
 
 Type `M-x mail` to send a mail.

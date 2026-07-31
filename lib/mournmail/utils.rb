@@ -46,6 +46,16 @@ module Mournmail
     HAVE_MAIL_GPG = false
   end
 
+  # Raised by :mournmail_virus_scan_hook when a virus is detected.
+  class VirusDetected < StandardError
+    attr_reader :virus_name
+
+    def initialize(virus_name = "unknown")
+      @virus_name = virus_name
+      super("Virus detected: #{virus_name}")
+    end
+  end
+
   def self.define_variable(name, initial_value: nil, attr: nil)
     var_name = "@" + name.to_s
     if !instance_variable_defined?(var_name)
@@ -433,6 +443,24 @@ module Mournmail
   def self.read_mail_cache(cache_id)
     path = Mournmail.mail_cache_path(cache_id)
     File.read(path)
+  end
+
+  # Returns the virus name if a virus is detected, nil otherwise.
+  def self.scan_virus(data)
+    run_hooks(:mournmail_virus_scan_hook, data)
+    nil
+  rescue VirusDetected => e
+    foreground do
+      message("Virus detected: #{e.virus_name}")
+    end
+    e.virus_name
+  rescue => e
+    # Treat the mail as unscanned so that a broken scanner doesn't make
+    # mails unreadable.
+    foreground do
+      message("Virus scan failed: #{e.class}: #{e.message}")
+    end
+    nil
   end
 
   def self.write_mail_cache(s)

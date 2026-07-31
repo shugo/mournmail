@@ -55,9 +55,9 @@ module Mournmail
       return if uid.nil?
       summary = Mournmail.current_summary
       Mournmail.background do
-        mail, fetched = summary.read_mail(uid)
+        mail, fetched, virus = summary.read_mail(uid)
         foreground do
-          show_message(mail)
+          show_message(mail, virus)
           mark_as_seen(uid, false)
           Mournmail.current_uid = uid
           Mournmail.current_mail = mail
@@ -306,8 +306,9 @@ module Mournmail
         end
         s = mails.map { |mail| mail.body.decoded }.join
         mail = Mail.new(s)
+        virus = Mournmail.scan_virus(s)
         foreground do
-          show_message(mail)
+          show_message(mail, virus)
           Mournmail.current_uid = nil
           Mournmail.current_mail = mail
         end
@@ -408,7 +409,7 @@ module Mournmail
               data&.each do |i|
                 uid = i.attr["UID"]
                 s = i.attr["BODY[]"]
-                if s
+                if s && Mournmail.scan_virus(s).nil?
                   cache_id = Mournmail.write_mail_cache(s)
                   Mournmail.index_mail(cache_id, Mail.new(s))
                   summary[uid].cache_id = cache_id
@@ -528,7 +529,7 @@ module Mournmail
       end
     end
 
-    def show_message(mail)
+    def show_message(mail, virus = nil)
       message_buffer = Buffer.find_or_new("*message*",
                                           undo_limit: 0, read_only: true)
       message_buffer.apply_mode(Mournmail::MessageMode)
@@ -538,6 +539,7 @@ module Mournmail
         message_buffer.beginning_of_buffer
       end
       message_buffer[:mournmail_mail] = mail
+      message_buffer[:mournmail_virus] = virus
       window = Mournmail.message_window
       window.buffer = message_buffer
     end

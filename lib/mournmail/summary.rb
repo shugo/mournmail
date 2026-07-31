@@ -130,7 +130,7 @@ module Mournmail
         item = @uid_table[uid]
         if item.cache_id
           File.open(Mournmail.mail_cache_path(item.cache_id)) do |f|
-            [Mournmail.parse_mail(f.read), false]
+            [Mournmail.parse_mail(f.read), false, nil]
           end
         else
           Mournmail.imap_connect do |imap|
@@ -141,13 +141,15 @@ module Mournmail
             end
             s = data[0].attr["BODY[]"]
             mail = Mournmail.parse_mail(s)
+            virus = Mournmail.scan_virus(s)
             spam_mailbox = Mournmail.account_config[:spam_mailbox]
-            if spam_mailbox.nil? || 
-                @mailbox != Net::IMAP.encode_utf7(spam_mailbox)
+            if virus.nil? &&
+                (spam_mailbox.nil? ||
+                 @mailbox != Net::IMAP.encode_utf7(spam_mailbox))
               item.cache_id = Mournmail.write_mail_cache(s)
               Mournmail.index_mail(item.cache_id, mail)
             end
-            [mail, true]
+            [mail, true, virus]
           end
         end
       end
