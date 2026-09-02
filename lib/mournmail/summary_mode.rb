@@ -98,8 +98,10 @@ module Mournmail
     define_local_command(:summary_reply,
                          doc: "Reply to the current message.") do
       |reply_all = current_prefix_arg|
+      summary = Mournmail.current_summary
+      uid = selected_uid
       Mournmail.background do
-        mail = read_current_mail[0]
+        mail, = summary.read_mail(uid)
         body = mail.render_text
         foreground do
           Window.current = Mournmail.message_window
@@ -256,9 +258,10 @@ module Mournmail
 
     define_local_command(:summary_view_source,
                          doc: "View source of a mail.") do
+      summary = Mournmail.current_summary
       uid = selected_uid
       Mournmail.background do
-        mail, = read_current_mail
+        mail, = summary.read_mail(uid)
         foreground do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
@@ -498,12 +501,6 @@ module Mournmail
 
     def marked_uids
       @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
-    end
-
-    def read_current_mail
-      summary = Mournmail.current_summary
-      uid = selected_uid
-      summary.read_mail(uid)
     end
 
     def scroll_up_or_next_uid
