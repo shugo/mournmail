@@ -453,8 +453,9 @@ module Mournmail
 
     define_local_command(:summary_show_thread,
                          doc: "Show the thread of the current mail.") do
+      uid = selected_uid
       Mournmail.background do
-        message = current_message
+        message = get_message(uid)
         messages = Groonga["Messages"].select { |m|
           m.thread_id == message.thread_id
         }.sort([["date", :asc]])
@@ -666,7 +667,10 @@ module Mournmail
     end
 
     def current_message
-      uid = selected_uid
+      get_message(selected_uid)
+    end
+
+    def get_message(uid)
       item = get_summary_item(uid)
       message = Groonga["Messages"][item.cache_id]
       if message.nil?
