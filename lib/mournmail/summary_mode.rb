@@ -98,10 +98,9 @@ module Mournmail
     define_local_command(:summary_reply,
                          doc: "Reply to the current message.") do
       |reply_all = current_prefix_arg|
-      summary = Mournmail.current_summary
-      uid = selected_uid
+      read_mail = current_mail_reader
       Mournmail.background do
-        mail, = summary.read_mail(uid)
+        mail, = read_mail.call
         body = mail.render_text
         foreground do
           Window.current = Mournmail.message_window
@@ -258,10 +257,9 @@ module Mournmail
 
     define_local_command(:summary_view_source,
                          doc: "View source of a mail.") do
-      summary = Mournmail.current_summary
-      uid = selected_uid
+      read_mail = current_mail_reader
       Mournmail.background do
-        mail, = summary.read_mail(uid)
+        mail, = read_mail.call
         foreground do
           source_buffer = Buffer.find_or_new("*message-source*",
                                              file_encoding: "ascii-8bit",
@@ -453,9 +451,8 @@ module Mournmail
 
     define_local_command(:summary_show_thread,
                          doc: "Show the thread of the current mail.") do
-      uid = selected_uid
+      message = current_message
       Mournmail.background do
-        message = get_message(uid)
         messages = Groonga["Messages"].select { |m|
           m.thread_id == message.thread_id
         }.sort([["date", :asc]])
@@ -502,6 +499,15 @@ module Mournmail
 
     def marked_uids
       @buffer.to_s.scan(/^ *\d+(?=\*)/).map(&:to_i)
+    end
+
+    # Returns a lambda that reads the current mail.
+    # This method must be called in the foreground, and the returned
+    # lambda can be called in the background.
+    def current_mail_reader
+      summary = Mournmail.current_summary
+      uid = selected_uid
+      -> { summary.read_mail(uid) }
     end
 
     def scroll_up_or_next_uid

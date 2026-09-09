@@ -116,12 +116,9 @@ module Mournmail
       end
     end
 
-    def read_current_mail
-      message = @buffer[:messages][@buffer.current_line]
-      if message.nil?
-        raise EditorError, "No message found"
-      end
-      [Mail.new(Mournmail.read_mail_cache(message._key)), false, nil]
+    def current_mail_reader
+      message = current_message
+      -> { [Mail.new(Mournmail.read_mail_cache(message._key)), false, nil] }
     end
 
     def next_message
