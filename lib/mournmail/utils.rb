@@ -5,13 +5,13 @@ require "tempfile"
 require "fileutils"
 require "timeout"
 require "digest"
-require "nkf"
 require "groonga"
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/storage'
 require 'google/api_client/auth/storages/file_store'
 require 'launchy'
 require "socket"
+require "cgi"
 
 if defined?(Net::SMTP::Authenticator)
   class Net::SMTP
@@ -39,13 +39,6 @@ else
 end
 
 module Mournmail
-  begin
-    require "mail-gpg"
-    HAVE_MAIL_GPG = true
-  rescue LoadError
-    HAVE_MAIL_GPG = false
-  end
-
   # Raised by :mournmail_virus_scan_hook when a virus is detected.
   class VirusDetected < StandardError
     attr_reader :virus_name
@@ -156,19 +149,6 @@ module Mournmail
     if summary_window
       Window.current = summary_window
     end
-  end
-
-  def self.escape_binary(s)
-    s.b.gsub(/[\x80-\xff]/n) { |c|
-      "<%02X>" % c.ord
-    }
-  end
-
-  def self.decode_eword(s)
-    Mail::Encodings.decode_encode(s, :decode).
-      encode(Encoding::UTF_8, replace: "?").gsub(/[\t\n]/, " ")
-  rescue Encoding::CompatibilityError, Encoding::UndefinedConversionError
-    escape_binary(s)
   end
 
   def self.current_account
@@ -577,22 +557,6 @@ module Mournmail
     Net::IMAP.encode_utf7(mailbox)
   end
 
-  def self.force_utf8(s)
-    s.dup.force_encoding(Encoding::UTF_8).scrub("?")
-  end
-
-  def self.to_utf8(s, charset)
-    if /\Autf-8\z/i.match?(charset)
-      force_utf8(s)
-    else
-      begin
-        s.encode(Encoding::UTF_8, charset, replace: "?")
-      rescue
-        force_utf8(NKF.nkf("-w", s))
-      end
-    end.gsub(/\r\n/, "\n")
-  end
-
   def self.open_groonga_db
     db_path = File.expand_path("groonga/#{current_account}/messages.db",
                                CONFIG[:mournmail_directory])
@@ -638,10 +602,6 @@ module Mournmail
     if @groonga_db
       @groonga_db.close
     end
-  end
-
-  def self.parse_mail(s)
-    Mail.new(s.scrub("??"))
   end
 
   def self.read_account_name(prompt, **opts)
