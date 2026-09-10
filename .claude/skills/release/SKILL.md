@@ -62,7 +62,7 @@ failed.
 
 4. Watch the gem go out.  The `v*` tag runs `push_gem.yml`, which
    publishes through RubyGems.org's trusted publishing and then creates a
-   draft GitHub release with generated notes.  Check once --
+   GitHub release with generated notes.  Check once --
    `gh run list --workflow push_gem.yml --limit 1` -- and start one
    background wait on that run's conclusion:
 
@@ -79,7 +79,6 @@ failed.
 5. Report: the version, the range the release covers
    (`v<previous>..v<new>`) with the commits that decided it, the
    workflow's conclusion once it arrives with
-   https://rubygems.org/gems/mournmail, and the draft GitHub release
-   (`gh release view v<N> --json url --jq .url`), which Shugo publishes
-   himself.  Nothing else needs updating for a release: the README carries
-   no version number.
+   https://rubygems.org/gems/mournmail, and the GitHub release
+   (`gh release view v<N> --json url --jq .url`).  Nothing else needs
+   updating for a release: the README carries no version number.

@@ -85,7 +85,7 @@ Versions are single integers since v2.  `rake bump` checks out `main`,
 pulls, adds one to `VERSION` in `lib/mournmail/version.rb`, commits that
 file as `Bump version to <N>`, pushes, and pushes the tag `v<N>`.  The tag
 runs `.github/workflows/push_gem.yml`, which publishes through RubyGems.org's
-trusted publishing and creates a draft GitHub release for Shugo to publish.
+trusted publishing and creates a GitHub release with generated notes.
 Do not run `bundle exec rake release`: it pushes the gem from the local
 machine too, and the two pushes conflict, which is how the v3 workflow run
 failed.  The `release` skill wraps the checks around this.

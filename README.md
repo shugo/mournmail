@@ -176,7 +176,7 @@ To run the tests, run `bundle exec rake test`. They are also run by GitHub Actio
 
 To install this gem onto your local machine, run `bundle exec rake install`.
 
-To release a new version, run `bundle exec rake bump` on a clean checkout of `main`. It increments the version number in `version.rb`, commits it, and pushes the commit and a `v<version>` tag. Pushing the tag runs `.github/workflows/push_gem.yml`, which publishes the gem to [rubygems.org](https://rubygems.org) through trusted publishing and creates a draft GitHub release. Do not run `bundle exec rake release`; it pushes the gem from the local machine as well, and the two pushes conflict.
+To release a new version, run `bundle exec rake bump` on a clean checkout of `main`. It increments the version number in `version.rb`, commits it, and pushes the commit and a `v<version>` tag. Pushing the tag runs `.github/workflows/push_gem.yml`, which publishes the gem to [rubygems.org](https://rubygems.org) through trusted publishing and creates a GitHub release with generated notes. Do not run `bundle exec rake release`; it pushes the gem from the local machine as well, and the two pushes conflict.
 
 ## Contributing
 
