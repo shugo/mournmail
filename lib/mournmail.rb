@@ -1,6 +1,7 @@
 require_relative "mournmail/version"
 require_relative "mournmail/config"
 require_relative "mournmail/faces"
+require_relative "mournmail/text"
 require_relative "mournmail/utils"
 require_relative "mournmail/header_folding"
 require_relative "mournmail/message_rendering"
