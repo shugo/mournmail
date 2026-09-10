@@ -112,7 +112,8 @@ module Mournmail
             }.uniq.reject { |addr|
               mail.from&.include?(addr)
             }
-            insert("\nCc: " + cc_addrs.join(", "))
+            insert("\n" +
+                   Mournmail.fold_header_field("Cc", cc_addrs.join(", ")))
           else
             insert(mail.reply_to&.join(", ") || mail.from&.join(", "))
           end
@@ -130,7 +131,7 @@ module Mournmail
           end
           if !references.empty?
             refs = references.map { |id| "<#{id}>" }.join(" ")
-            insert("\nReferences: " + refs)
+            insert("\n" + Mournmail.fold_header_field("References", refs))
           end
           end_of_buffer
           push_mark

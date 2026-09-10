@@ -54,7 +54,9 @@ module Mournmail
         when "PGP-Encrypt"
           pgp_encrypt = val.strip == "yes"
         else
-          m[name] = val
+          # Folded values are unfolded here so that the mail library can
+          # parse them and fold them again with CRLF (RFC 5322 2.2.3).
+          m[name] = Mournmail.unfold_header_value(val)
         end
       end
       if body.empty?
