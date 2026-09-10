@@ -8,3 +8,21 @@ Rake::TestTask.new(:test) do |t|
 end
 
 task :default => :test
+
+task :bump do
+  require_relative "lib/mournmail/version"
+  version = Mournmail::VERSION.to_i + 1
+  tag_name = "v#{version}"
+  puts "Bump version to #{version}"
+  sh "git checkout main"
+  sh "git pull"
+  File.write("lib/mournmail/version.rb", <<~EOF)
+    module Mournmail
+      VERSION = "#{version}"
+    end
+  EOF
+  sh "git commit -a -m 'Bump version to #{version}'"
+  sh "git push"
+  sh "git tag #{tag_name}"
+  sh "git push origin #{tag_name}"
+end
