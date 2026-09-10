@@ -15,6 +15,52 @@ rescue LoadError
 end
 
 if MOURNMAIL_GROONGA_AVAILABLE
+  require "curses"
+
+  # Face.define calls Curses.init_pair, which opens the terminal and
+  # aborts the process when there is none (TERM is unset on CI).  Stub
+  # the screen-level functions the way Textbringer's own tests do.
+  class << Curses
+    [
+      :init_screen, :close_screen,
+      :echo, :noecho,
+      :raw, :noraw,
+      :nl, :nonl,
+      :start_color,
+      :use_default_colors,
+      :init_pair,
+      :doupdate
+    ].each do |name|
+      undef_method name
+      define_method(name) { |*args| }
+    end
+
+    undef lines
+    def lines
+      24
+    end
+
+    undef cols
+    def cols
+      80
+    end
+
+    undef has_colors?
+    def has_colors?
+      true
+    end
+
+    undef color_pair
+    def color_pair(n)
+      0
+    end
+
+    undef colors
+    def colors
+      256
+    end
+  end
+
   require "textbringer"
   include Textbringer
   include Textbringer::Commands
