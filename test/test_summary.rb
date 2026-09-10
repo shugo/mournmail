@@ -259,7 +259,7 @@ class TestSummary < Mournmail::PluginTestCase
     hook = ->(data) { raise "scanner is down" }
     HOOKS[:mournmail_virus_scan_hook].push(hook)
     begin
-      mail, fetched, virus = with_imap(imap) { summary.read_mail(1) }
+      _mail, _fetched, virus = with_imap(imap) { summary.read_mail(1) }
     ensure
       HOOKS[:mournmail_virus_scan_hook].delete(hook)
     end

@@ -55,7 +55,7 @@ module Mournmail
       return if uid.nil?
       summary = Mournmail.current_summary
       Mournmail.background do
-        mail, fetched, virus = summary.read_mail(uid)
+        mail, _, virus = summary.read_mail(uid)
         foreground do
           show_message(mail, virus)
           mark_as_seen(uid, false)
@@ -221,7 +221,6 @@ module Mournmail
         Expunge deleted messages.
       EOD
       buffer = Buffer.current
-      mailbox = Mournmail.current_mailbox
       summary = Mournmail.current_summary
       Mournmail.background do
         Mournmail.imap_connect do |imap|
@@ -487,7 +486,7 @@ module Mournmail
     end
 
     def selected_uid
-      uid = @buffer.save_excursion {
+      @buffer.save_excursion {
         @buffer.beginning_of_line
         if !@buffer.looking_at?(/ *\d+/)
           Mournmail.current_mail = nil

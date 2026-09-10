@@ -154,7 +154,7 @@ module Mournmail
             end
           end
         end
-      rescue => e
+      rescue
         ""
       end
 

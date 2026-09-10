@@ -132,6 +132,7 @@ module Mournmail
     def with_imap(imap)
       Mournmail.singleton_class.class_eval do
         alias_method :imap_connect_without_fake, :imap_connect
+        remove_method :imap_connect
         define_method(:imap_connect) do |&block|
           if imap.nil?
             raise "imap_connect must not be called in this test"
@@ -142,6 +143,7 @@ module Mournmail
       yield
     ensure
       Mournmail.singleton_class.class_eval do
+        remove_method :imap_connect
         alias_method :imap_connect, :imap_connect_without_fake
         remove_method :imap_connect_without_fake
       end

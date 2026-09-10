@@ -11,6 +11,7 @@ require 'google/api_client/auth/storage'
 require 'google/api_client/auth/storages/file_store'
 require 'launchy'
 require "socket"
+require "cgi"
 
 if defined?(Net::SMTP::Authenticator)
   class Net::SMTP
